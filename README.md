@@ -1,0 +1,110 @@
+# Vinyl Vault
+
+A web-based, PWA-capable viewer for your personal **Discogs collection**. Fetch your collection once, browse it offline — grouped by artist, sorted the way you want, searchable and filterable.
+
+## Features
+
+- **Your collection, beautifully browsed** — collection fetched from the Discogs API and grouped by artist in a cover-art grid. Split/collaboration releases are cross-listed under every credited artist (compilations stay under **Various**), and Discogs' disambiguation suffixes are stripped, so **Alice Cooper (2)** groups and searches under **Alice Cooper**.
+- **Filing sort** — leading articles (`a`, `an`, `the`) are ignored when sorting, so **The Menzingers** files under **M**. Diacritics and punctuation are normalized too (`Motörhead` → `motorhead`).
+- **Sort within an artist** — toggle between **Year** (oldest → newest, default) and **A–Z** (by album name, article-stripped) per artist; click any artist header to collapse or expand its shelf.
+- **Summary & unique albums** — the summary keeps running totals of `N artists · M releases · U unique albums`; every artist header shows its own release and unique-album counts. *Unique albums* counts distinct masters (a release id when a master is missing), so several pressings of the same album count once.
+- **Search & filter** — debounced search across artist, title, genre, style, label and year; filters for format and genre populated from your actual data.
+- **Collection folders** — a first-level folder bar above the search: pick a Discogs folder (or **All**) and the search, filters, summary and grids all follow that folder. The whole collection is still fetched once, so switching folders is instant.
+- **Release details** — click any cover for an overlay with everything we have on hand: original/pressing years, format, label + catno, genres/styles, credits, country, rating, added date, and direct Discogs links.
+- **Random picker** — can't decide what to listen to? A floating shuffle button always sits in the corner for one-click picks from the current folder (respecting any active search/filters); with the detail view open it re-rolls to a new random release.
+- **Tracklists** — the detail view also lists the full tracklisting, loaded per release on demand and cached in IndexedDB (so it's instant on reopening and works offline).
+- **4 UI styles** — choose from **Midnight** (dark navy), **Paper** (warm light), **Club** (neon dark) or **Forest** (mossy dark) in settings; your choice is remembered.
+- **Offline & installable** — service worker caches the app shell and cover art; your collection is cached in IndexedDB so it loads instantly and works offline. Install on iPhone/Android via "Add to Home Screen".
+- **Rate-limit friendly** — pages are fetched sequentially with backoff/retry to stay inside Discogs' 60 req/min limit.
+
+## Requirements
+
+- Node.js **22+** (for development/build)
+- A free **Discogs personal access token** — create one at <https://www.discogs.com/settings/developers>
+- Docker (optional, for containerized hosting)
+
+## Quick start (development)
+
+```bash
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173>. Enter your Discogs username and personal access token on the first screen — they're stored only in your browser's localStorage.
+
+## Run it in Docker
+
+```bash
+docker compose up --build
+```
+
+Then open <http://localhost:8080>. The image is a multi-stage build: the frontend is compiled in `node:22-alpine`, then served by `nginx:alpine` (gzip, SPA fallback, immutable caching for hashed assets).
+
+## Install as a PWA on your iPhone
+
+1. Serve the app over **HTTPS** (required by iOS — see below) and open it in Safari.
+2. Tap **Share** → **Add to Home Screen**.
+3. It opens full-screen with the Vinyl Vault icon.
+
+For testing, `localhost` is exempt from the HTTPS requirement, but a real install needs a secure origin.
+
+### HTTPS options
+
+| Option | What to do |
+| --- | --- |
+| Free static host | Deploy the built `dist/` folder to **Cloudflare Pages**, **Netlify** or **Vercel** — auto-HTTPS, works with the Docker image's output exactly as-is. |
+| Self-hosted | Put Caddy in front of the container; it provisions Let's Encrypt certificates automatically. Point a domain at your host and add a Caddyfile line for it. |
+| Tailscale | Serve over your tailnet with a `tailscale cert` for personal/private use. |
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Vite dev server with hot reload |
+| `npm run build` | Type-check, lint, then production build to `dist/` (also regenerates the PWA service worker + manifest) |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` / `lint:fix` | ESLint (flat config; eslint.config.js with js + typescript-eslint + react-hooks + react-refresh) |
+| `npm run icons` | Regenerate app icons from `public/icons/icon.svg` (needs a one-off `npm i -D sharp`) |
+
+## Project structure
+
+```
+├── Dockerfile / docker-compose.yml / nginx.conf   # containerized hosting
+├── eslint.config.js                               # ESLint flat config
+├── index.html                                     # app shell + PWA/iOS meta tags
+├── vite.config.ts                                 # build + PWA configuration
+├── public/
+│   ├── icons/                                     # app icons (192, 512, maskable)
+│   ├── favicon.svg
+│   └── apple-touch-icon.png
+├── scripts/gen-icons.mjs                          # icon generator
+└── src/
+    ├── api/discogs.ts                             # Discogs client (pagination, retries)
+    ├── db/                                        # settings + IndexedDB collection cache
+    ├── hooks/useCollection.ts                     # fetch/cache/refresh lifecycle
+    ├── utils/
+    │   ├── sortName.ts                            # article-stripping sort keys
+    │   └── collection.ts                          # grouping, filtering, display shaping
+    ├── types/discogs.ts                           # Discogs API types
+    └── components/                                # Settings, SearchBar, FilterBar, …
+```
+
+## How it works
+
+1. **Settings screen** — you enter username + personal access token.
+2. **Fetch** — `GET /users/{username}/collection/folders/0/releases` is paginated (100 per page) with a ~1.1s delay between pages to respect Discogs rate limits. Failures retry with exponential backoff.
+3. **Cache** — the full collection (plus the folder list) is stored in IndexedDB per username. Reopening the app shows cached data instantly and re-syncs in the background (stale-while-revalidate). Original release years are enriched from each unique master (one paced API call each) and cached too, so pressing-vs-original years work offline.
+4. **Browsing** — pick a folder (or **All**), then releases are grouped by artist (split releases appear under every credited artist; compilations under **Various**), artists sorted by their filing-sort key, and every artist section carries its own Year/A–Z toggle.
+
+## Privacy notes
+
+- Your token is kept **in your browser only** (localStorage). It's sent to Discogs and nowhere else. Anyone with access to your device could extract it — regenerate it anytime at <https://www.discogs.com/settings/developers>.
+- "Clear local data" in settings removes the cached collection and stored credentials from your device.
+
+## Future ideas
+
+- Multi-user via Discogs OAuth
+
+---
+
+This README is part of the repo and is kept in sync as the app evolves — when features, commands, or structure change, this file is updated to match.

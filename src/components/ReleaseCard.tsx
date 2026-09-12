@@ -1,0 +1,62 @@
+import type { KeyboardEvent } from 'react'
+import type { DisplayRelease } from '../utils/collection'
+import { effectiveYears } from '../utils/collection'
+
+interface ReleaseCardProps {
+  display: DisplayRelease
+  onOpen?: (display: DisplayRelease) => void
+}
+
+export function ReleaseCard({ display, onOpen }: ReleaseCardProps) {
+  const lines = effectiveYears(display)
+
+  const handleKey = (event: KeyboardEvent<HTMLElement>) => {
+    if (!onOpen) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onOpen(display)
+    }
+  }
+
+  return (
+    <article
+      className="release-card"
+      role="button"
+      tabIndex={onOpen ? 0 : undefined}
+      aria-label={`${display.artistName} — ${display.title}`}
+      onClick={onOpen ? () => onOpen(display) : undefined}
+      onKeyDown={handleKey}
+    >
+      <div className="release-cover">
+        {display.coverImage ? (
+          <img
+            src={display.coverImage}
+            alt={`${display.artistName} — ${display.title}`}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="release-cover missing" aria-label="No cover art">
+            ♫
+          </div>
+        )}
+      </div>
+      <div className="release-meta">
+        <h3 className="release-title" title={display.title}>
+          {display.title}
+        </h3>
+        {lines.length > 0 && (
+          <div className="release-years">
+            {lines.map((line, index) => (
+              <p className="release-year" key={index}>
+                {line.label && <span className="release-year-label">{line.label}</span>}
+                {line.value}
+              </p>
+            ))}
+          </div>
+        )}
+        {display.formatText && <p className="release-format">{display.formatText}</p>}
+      </div>
+    </article>
+  )
+}
