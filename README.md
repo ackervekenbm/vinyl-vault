@@ -103,7 +103,25 @@ For testing, `localhost` is exempt from the HTTPS requirement, but a real instal
 
 ## Future ideas
 
-- Multi-user via Discogs OAuth
+**Organization & practicality**
+- **Saved views / smart lists** — persist filter combinations as named lists ("7-inch singles", "90s techno") and switch between them from the toolbar.
+- **Master view** — group all pressings of the same master under one card ("4 pressings") alongside the current per-release browsing.
+- **Collection stats dashboard** — top genres, styles, labels and formats; year-distribution and acquisition-timeline charts from the cached data.
+- **Collection export** — one-click CSV/JSON dump of the collection (or a printable shelf list).
+- **Listen log** — extend the random picker to log each pick as listened, re-roll avoiding recently-played records.
+
+**Discovery & buying**
+- **Record-store mode** — look up any release (or scan its barcode) and instantly see whether it's in your collection, which folder it lives in, and which pressings you own.
+- **Artist completeness** — "you own 6 of 41 releases": compare your collection against each artist's full Discogs discography (paced API calls, like the master-year enrichment).
+- **Collection value** — estimated spend/total value from Discogs price data, with most-valuable records on top.
+
+**UX polish**
+- **Recently added view** — globally sort by *date added* (the data's already cached, zero extra API cost).
+- **Keyboard shortcuts & shuffle-all** — J/K to navigate, Enter to open, R for random; plus a global "listen through the collection" queue mode.
+
+**Shelf & accounts**
+- **Record cabinet organizer** — describe your furniture (e.g. 1 cabinet × 8 slots) and the app assigns every record a slot in it. You pick the rules, it picks the placement: keep 7″/10″ separate from 12″, keep an artist's records together, sort by artist then year (or title), and distribute evenly across slots. Like a shelf-planning assistant for your collection.
+- **Multi-user via Discogs OAuth** — real per-user login instead of a shared personal access token.
 
 ---
 
