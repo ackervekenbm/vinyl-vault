@@ -59,6 +59,10 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
+          # Plain single-arch images (no SBOM/provenance attestations) so the
+          # manifest job can amend them into a multi-arch index.
+          provenance: false
+          sbom: false
           tags: |
             ${{ env.IMAGE }}:latest-${{ matrix.arch }}
             ${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
