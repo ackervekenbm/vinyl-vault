@@ -57,7 +57,12 @@ Every push to `main` builds each architecture **natively on GitHub's ARM/x86 run
    sudo docker login ghcr.io -u ackervekenbm
    ```
 
-   The password is a GitHub **personal access token** with the `read:packages` scope (Settings → Developer settings → Fine-grained tokens → Read access to your packages). This only needs to happen once; the credential is stored on the Pi.
+   The password is a GitHub **personal access token** with `read:packages` — create one at <https://github.com/settings/tokens>. (GHCR rejects anonymous pulls even for public images, so this login is required.)
+
+   - **Fine-grained (recommended):** *Personal access tokens → Fine-grained tokens → Generate new token* → name it, set an expiry a year out (the Pi keeps the token until it expires), set *Repository access* → *Only select repositories* → `vinyl-vault`, then under **Account permissions** set **Packages → Read** and leave every other permission at *No access* → generate and copy.
+   - **Classic:** *Tokens (classic) → Generate new token (classic)* → tick only **`read:packages`** → generate and copy.
+
+   Use your GitHub username as the login name for either token type. Login is a one-time step; the credential is stored on the Pi. (To also `git pull` updates on the Pi later, grant *Contents → Read* on the same fine-grained token — or add the `repo` scope to a classic one — and use it for `git` too.)
 3. Services → Compose → **Files** → create a new file named `vinyl-vault.yml`, pasting:
 
    ```yaml
