@@ -57,12 +57,11 @@ Every push to `main` builds each architecture **natively on GitHub's ARM/x86 run
    sudo docker login ghcr.io -u ackervekenbm
    ```
 
-   The password is a GitHub **personal access token** with `read:packages` — create one at <https://github.com/settings/tokens>. (GHCR rejects anonymous pulls even for public images, so this login is required.)
+   The password is a GitHub **personal access token (classic)** — fine-grained tokens don't support GitHub Packages at all, so this has to be a classic token. (GHCR also rejects anonymous pulls even for public images, so this login is required.)
 
-   - **Fine-grained (recommended):** *Personal access tokens → Fine-grained tokens → Generate new token* → name it, set an expiry a year out (the Pi keeps the token until it expires), set *Repository access* → *Only select repositories* → `vinyl-vault`, then under **Account permissions** set **Packages → Read** and leave every other permission at *No access* → generate and copy.
-   - **Classic:** *Tokens (classic) → Generate new token (classic)* → tick only **`read:packages`** → generate and copy.
+   Create it at <https://github.com/settings/tokens> → **Tokens (classic)** → *Generate new token (classic)* → tick **`read:packages`** (add **`repo`** too if you also want `git pull` updates on the Pi to work with the same token), set an expiration, and generate. Copy the token (shown only once) and use your GitHub username as the login name. Login is a one-time step; the credential is stored on the Pi.
 
-   Use your GitHub username as the login name for either token type. Login is a one-time step; the credential is stored on the Pi. (To also `git pull` updates on the Pi later, grant *Contents → Read* on the same fine-grained token — or add the `repo` scope to a classic one — and use it for `git` too.)
+   Note: a classic token can access everything your account can access on GitHub — keep the expiry short-ish (up to a year), and if it expires, re-login on the Pi (`sudo docker login ghcr.io` again) before pulling.
 3. Services → Compose → **Files** → create a new file named `vinyl-vault.yml`, pasting:
 
    ```yaml
