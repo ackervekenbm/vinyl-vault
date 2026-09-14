@@ -40,6 +40,46 @@ docker compose up --build
 
 Then open <http://localhost:8080>. The image is a multi-stage build: the frontend is compiled in `node:22-alpine`, then served by `nginx:alpine` (gzip, SPA fallback, immutable caching for hashed assets).
 
+### On a Raspberry Pi running OpenMediaVault
+
+The image builds natively for **arm64**, so it runs on a Pi without any changes. Because OMV's own web UI listens on ports 80/443, the app is exposed on host port **8080**.
+
+There are two ways to deploy; pick one.
+
+**Route A — prebuilt image (all from the OMV web UI)**
+
+Every push to `main` publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to **GitHub Container Registry** as `ghcr.io/ackervekenbm/vinyl-vault:latest` (the workflow lives in `.github/workflows/docker-build.yml`, free for public packages). No building on the Pi, no SSH needed beyond enabling Docker.
+
+1. In OMV, install **omv-extras**, then enable **Docker** and the **Compose plugin** (Services → Compose).
+2. Services → Compose → **Files** → create a new file named `vinyl-vault.yml`, pasting:
+
+   ```yaml
+   services:
+     vinyl-vault:
+       image: ghcr.io/ackervekenbm/vinyl-vault:latest
+       container_name: vinyl-vault
+       ports:
+         - "8080:80"
+       restart: unless-stopped
+   ```
+
+3. Save, then under **Stacks** → Add → point it at that file and hit **Up**. Open `http://<pi-ip>:8080`.
+4. **To update later:** from the GUI re-pull the image (`docker compose pull`) and **Up** again — no data risk, the container is stateless.
+
+**Route B — build it on the Pi**
+
+```bash
+cd ~
+git clone https://github.com/ackervekenbm/vinyl-vault.git
+cd vinyl-vault
+sudo docker compose up -d --build
+```
+
+Notes:
+- **No volumes needed** — the container is pure static hosting; every user's data lives in the browser. Recreates/updates are lossless.
+- **To update later:** `git pull && sudo docker compose up -d --build` in the same folder.
+- **PWA install needs HTTPS.** Over plain LAN HTTP the app works fine in a browser, but the service worker / "Add to Home Screen" install requires a secure context. If you want installable PWA on the Pi, put a TLS reverse proxy in front: OMV's **Reverse Proxy plugin (nginx + Let's Encrypt)** or a small Caddy container.
+
 ## Install as a PWA on your iPhone
 
 1. Serve the app over **HTTPS** (required by iOS — see below) and open it in Safari.
@@ -70,6 +110,7 @@ For testing, `localhost` is exempt from the HTTPS requirement, but a real instal
 
 ```
 ├── Dockerfile / docker-compose.yml / nginx.conf   # containerized hosting
+├── .github/workflows/docker-build.yml             # publish multi-arch image to GHCR
 ├── eslint.config.js                               # ESLint flat config
 ├── index.html                                     # app shell + PWA/iOS meta tags
 ├── vite.config.ts                                 # build + PWA configuration
