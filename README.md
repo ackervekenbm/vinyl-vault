@@ -48,10 +48,17 @@ There are two ways to deploy; pick one.
 
 **Route A — prebuilt image (all from the OMV web UI)**
 
-Every push to `main` publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to **GitHub Container Registry** as `ghcr.io/ackervekenbm/vinyl-vault:latest` (the workflow lives in `.github/workflows/docker-build.yml`, free for public packages). No building on the Pi, no SSH needed beyond enabling Docker.
+Every push to `main` builds each architecture **natively on GitHub's ARM/x86 runners** (no emulation) and merges the two images into one multi-arch tag: `ghcr.io/ackervekenbm/vinyl-vault:latest`. The workflow lives in `.github/workflows/docker-build.yml`. No building on the Pi.
 
 1. In OMV, install **omv-extras**, then enable **Docker** and the **Compose plugin** (Services → Compose).
-2. Services → Compose → **Files** → create a new file named `vinyl-vault.yml`, pasting:
+2. **One-time registry login over SSH.** Unlike Docker Hub, the GitHub Container Registry requires a login for every pull, even of public images. On the Pi:
+
+   ```bash
+   sudo docker login ghcr.io -u ackervekenbm
+   ```
+
+   The password is a GitHub **personal access token** with the `read:packages` scope (Settings → Developer settings → Fine-grained tokens → Read access to your packages). This only needs to happen once; the credential is stored on the Pi.
+3. Services → Compose → **Files** → create a new file named `vinyl-vault.yml`, pasting:
 
    ```yaml
    services:
@@ -63,8 +70,8 @@ Every push to `main` publishes a multi-arch image (`linux/amd64` + `linux/arm64`
        restart: unless-stopped
    ```
 
-3. Save, then under **Stacks** → Add → point it at that file and hit **Up**. Open `http://<pi-ip>:8080`.
-4. **To update later:** from the GUI re-pull the image (`docker compose pull`) and **Up** again — no data risk, the container is stateless.
+4. Save, then under **Stacks** → Add → point it at that file and hit **Up**. Open `http://<pi-ip>:8080`.
+5. **To update later:** from the GUI re-pull the image (`docker compose pull`) and **Up** again — no data risk, the container is stateless.
 
 **Route B — build it on the Pi**
 
