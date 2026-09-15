@@ -206,7 +206,9 @@ button:disabled {
 }
 
 .settings-build {
-  margin: 0 0 22px;
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
   text-align: center;
   font-size: 11px;
   color: var(--text-faint);

@@ -47,40 +47,6 @@ export function SettingsForm({
         <h1>Vinyl Vault</h1>
         <p className="settings-sub">Your Discogs collection, beautifully browsable.</p>
 
-        <p className="settings-build">
-          {__BUILD_SHA__ === 'dev' ? (
-            'development build'
-          ) : (
-            <>
-              <a
-                href={`https://github.com/${__REPO__}/commit/${__BUILD_SHA__}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {__BUILD_SHA__.slice(0, 7)}
-              </a>
-              {__BUILD_TIME__ && (
-                <>
-                  {' · '}
-                  {new Date(__BUILD_TIME__).toLocaleDateString([], {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </>
-              )}
-              {' · '}
-              <a
-                href={`https://github.com/${__REPO__}/issues`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Report an issue
-              </a>
-            </>
-          )}
-        </p>
-
         <form onSubmit={handleSubmit} className="settings-form">
           <label htmlFor="username">
             Discogs username
@@ -144,6 +110,40 @@ export function SettingsForm({
         </div>
 
         {children}
+
+        <p className="settings-build">
+          {__BUILD_SHA__ === 'dev' ? (
+            'development build'
+          ) : (
+            <>
+              <a
+                href={`https://github.com/${__REPO__}/commit/${__BUILD_SHA__}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {__BUILD_SHA__.slice(0, 7)}
+              </a>
+              {__BUILD_TIME__ && (
+                <>
+                  {' · '}
+                  {new Date(__BUILD_TIME__).toLocaleDateString([], {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </>
+              )}
+              {' · '}
+              <a
+                href={`https://github.com/${__REPO__}/issues`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Report an issue
+              </a>
+            </>
+          )}
+        </p>
       </div>
     </div>
   )
