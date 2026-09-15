@@ -355,8 +355,8 @@ export default function App() {
         />
       )}
 
-      {/* Always-visible random picker */}
-      {!showSettings && (
+      {/* Random picker (hidden while first-loading or when loading failed with no data) */}
+      {!showSettings && !isLoadingFirst && !isLoadingFailed && (
         <button
           type="button"
           className="random-fab"
