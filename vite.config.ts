@@ -9,6 +9,13 @@ export default defineConfig({
       interval: 150,
     },
   },
+  define: {
+    // Injected at build time. Locally (vite dev) these fall back to dev
+    // values; the Docker build receives them as ARGs from the workflow.
+    __BUILD_SHA__: JSON.stringify(process.env.COMMIT_SHA ?? 'dev'),
+    __BUILD_TIME__: JSON.stringify(process.env.BUILD_TIME ?? ''),
+    __REPO__: JSON.stringify(process.env.GITHUB_REPOSITORY ?? 'ackervekenbm/vinyl-vault'),
+  },
   plugins: [
     react(),
     VitePWA({

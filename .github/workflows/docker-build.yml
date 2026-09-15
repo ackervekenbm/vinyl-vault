@@ -59,6 +59,10 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            GITHUB_REPOSITORY=${{ github.repository }}
           # Plain single-arch images (no SBOM/provenance attestations) so the
           # manifest job can amend them into a multi-arch index.
           provenance: false

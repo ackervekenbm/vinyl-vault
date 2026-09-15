@@ -1,6 +1,9 @@
 # Build stage
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG COMMIT_SHA
+ARG BUILD_TIME
+ARG GITHUB_REPOSITORY
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
