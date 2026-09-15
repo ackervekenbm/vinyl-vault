@@ -15,10 +15,17 @@ export function ReleaseDetail({ display, token, onClose }: ReleaseDetailProps) {
       if (event.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
+    // Stop the blurred page behind the modal from scrolling. Lock overflow on
+    // both the <html> and <body> elements: locking body alone is unreliable on
+    // iOS, where the viewport scrolls the document element.
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyOverflow = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.overflow = previousBodyOverflow
     }
   }, [onClose])
 

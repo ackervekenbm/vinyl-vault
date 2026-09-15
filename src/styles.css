@@ -845,6 +845,8 @@ button:disabled {
   place-items: center;
   padding: 20px;
   overflow-y: auto;
+  /* Don't let swiping past the modal's scroll edges push the page behind it. */
+  overscroll-behavior: contain;
 }
 
 .detail-card {
@@ -860,6 +862,7 @@ button:disabled {
   );
   overflow-y: auto;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  overscroll-behavior: contain;
 }
 
 .detail-close {
