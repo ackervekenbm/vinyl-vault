@@ -179,9 +179,7 @@ button:disabled {
   height: 64px;
   margin: 0 auto 8px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 30%, var(--accent), var(--accent-strong) 70%),
-    #0a0a10;
+  background: var(--accent);
   background-clip: padding-box;
   border: 6px solid var(--bg);
   display: grid;
@@ -1367,7 +1365,7 @@ button:disabled {
   justify-content: center;
 }
 
-.record-player .rr-vinyl {
+.rr-vinyl {
   animation: spin 1.6s linear infinite;
   transform-origin: center;
   transform-box: fill-box;
@@ -1380,8 +1378,34 @@ button:disabled {
   }
 }
 
+.rp-label {
+  fill: var(--accent-strong);
+}
+
+.rp-led {
+  animation: rp-blink 2.4s ease-in-out infinite;
+}
+
+.rp-power-led {
+  fill: var(--accent);
+}
+
+@keyframes rp-blink {
+  0%,
+  65% {
+    opacity: 1;
+  }
+  75%,
+  95% {
+    opacity: 0.1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .record-player .rr-vinyl {
+  .rr-vinyl {
     animation-duration: 3.2s;
   }
   .release-card:hover {
