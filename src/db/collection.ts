@@ -77,3 +77,8 @@ export async function clearReleaseDetails(): Promise<void> {
   const db = await dbPromise
   await db.clear(DETAIL_STORE)
 }
+
+export async function countReleaseDetails(): Promise<number> {
+  const db = await dbPromise
+  return await db.count(DETAIL_STORE)
+}
