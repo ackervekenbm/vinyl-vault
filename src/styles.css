@@ -186,8 +186,6 @@ button:disabled {
   border: 6px solid var(--bg);
   display: grid;
   place-items: center;
-  font-size: 22px;
-  color: #0a0a10;
 }
 
 .settings-card h1 {
@@ -1000,8 +998,7 @@ button:disabled {
 .release-cover.missing {
   display: grid;
   place-items: center;
-  color: var(--text-faint);
-  font-size: 26px;
+  opacity: 0.6;
 }
 
 .release-meta {
@@ -1370,13 +1367,11 @@ button:disabled {
   justify-content: center;
 }
 
-.spinner {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  animation: spin 0.8s linear infinite;
+.record-player .rr-vinyl {
+  animation: spin 1.6s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+  will-change: transform;
 }
 
 @keyframes spin {
@@ -1386,8 +1381,8 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 1.6s;
+  .record-player .rr-vinyl {
+    animation-duration: 3.2s;
   }
   .release-card:hover {
     transform: none;

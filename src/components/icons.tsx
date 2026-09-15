@@ -101,3 +101,105 @@ export function ChevronIcon({ size = 14, direction }: ChevronIconProps) {
     </svg>
   )
 }
+
+interface RecordGraphicProps {
+  disc?: string
+  rim?: string
+}
+
+function RecordGraphic({ disc = '#20202c', rim = '#3b3b4c' }: RecordGraphicProps) {
+  return (
+    <>
+      <circle cx="256" cy="256" r="196" fill={disc} />
+      <circle cx="256" cy="256" r="196" stroke={rim} strokeWidth="3" />
+      {/* grooves */}
+      <g stroke="#fff" fill="none" strokeWidth="1.5" opacity="0.05">
+        {Array.from({ length: 9 }, (_, i) => (
+          <circle key={i} cx="256" cy="256" r={156 - i * 14} />
+        ))}
+      </g>
+      {/* light reflection arc */}
+      <path
+        d="M108 198 A196 196 0 0 1 256 60"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="12"
+        strokeLinecap="round"
+        opacity="0.06"
+      />
+      {/* label */}
+      <circle cx="256" cy="256" r="76" fill="#d97a1e" />
+      <circle cx="256" cy="256" r="54" fill="#b85c14" opacity="0.18" />
+      <path
+        d="M256 214 A42 42 0 0 1 256 298"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="6"
+        strokeLinecap="round"
+        opacity="0.25"
+      />
+      {/* spindle hole */}
+      <circle cx="256" cy="256" r="13" fill="#101018" />
+    </>
+  )
+}
+
+export function VinylIcon({ size = 24 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      fill="none"
+      aria-hidden="true"
+    >
+      <RecordGraphic />
+    </svg>
+  )
+}
+
+export function RecordPlayer({ size = 150 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* deck (top view) */}
+      <rect
+        x="24"
+        y="24"
+        width="464"
+        height="464"
+        rx="40"
+        fill="#1d1d2a"
+        stroke="#2e2e3e"
+        strokeWidth="2"
+      />
+      {/* platter recess */}
+      <circle cx="244" cy="258" r="160" fill="#15151e" />
+      {/* spinning record, off-center */}
+      <g transform="translate(220 252) scale(0.755)">
+        <g className="rr-vinyl">
+          <RecordGraphic />
+        </g>
+      </g>
+      {/* tonearm (top-right, reaching down to the record) */}
+      <circle cx="426" cy="102" r="8" fill="#0d0d15" />
+      <circle cx="396" cy="118" r="15" fill="#262636" stroke="#3b3b4c" strokeWidth="2" />
+      <path
+        d="M392 128 C 366 162 354 190 330 214"
+        stroke="#3b3b4c"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      <path d="M330 214 L306 236" stroke="#1b1b26" strokeWidth="12" strokeLinecap="round" />
+      <circle cx="300" cy="240" r="3" fill="#101018" />
+      {/* power button + LED */}
+      <circle cx="430" cy="452" r="11" fill="none" stroke="#3a3a4c" strokeWidth="2.5" />
+      <circle cx="430" cy="452" r="4.5" fill="#d97a1e" />
+    </svg>
+  )
+}

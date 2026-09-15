@@ -26,7 +26,7 @@ import { SearchBar } from './components/SearchBar'
 import { FiltersButton, FilterPanel } from './components/FilterMenu'
 import { ArtistSection } from './components/ArtistSection'
 import { ReleaseDetail } from './components/ReleaseDetail'
-import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon } from './components/icons'
+import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon, RecordPlayer } from './components/icons'
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -194,7 +194,7 @@ export default function App() {
       {/* First-load spinner */}
       {isLoadingFirst && (
         <div className="full-state">
-          <div className="spinner" />
+          <RecordPlayer size={150} />
           <p>Loading your collection…</p>
           {progress && <p className="progress-text">{progressText(progress)}</p>}
         </div>
