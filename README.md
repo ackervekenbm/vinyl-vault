@@ -74,8 +74,11 @@ Every push to `main` builds each architecture **natively on GitHub's ARM/x86 run
        restart: unless-stopped
    ```
 
-4. Save, then under **Stacks** → Add → point it at that file and hit **Up**. Open `http://<pi-ip>:8080`.
-5. **To update later:** from the GUI re-pull the image (`docker compose pull`) and **Up** again — no data risk, the container is stateless.
+4. Save. Back in **Services → Compose → Files**, select `vinyl-vault.yml` and press **Up** — this creates and starts the container. Open `http://<pi-ip>:8080`.
+
+5. **To update later** (every `main` merge ships a new `:latest`): in **Services → Compose → Files**, select `vinyl-vault.yml` → press **Pull** (downloads the latest image) → press **Up** again (recreates the container with the new image; an unchanged image is a no-op). The container is stateless — no volumes, no data risk. If **Pull** fails with an auth error, redo the one-time login (`sudo docker login ghcr.io -u ackervekenbm`) first, then pull again.
+
+   Then refresh the app on your phone: it's served over plain HTTP (no service worker), so a normal refresh fetches the new build — nginx never caches `index.html`. Force-refresh once if you suspect a stale tab.
 
 **Route B — build it on the Pi**
 
