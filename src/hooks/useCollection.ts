@@ -100,37 +100,12 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
 
       if (controller.signal.aborted) return
 
-      // Fill in original release years for any masters we haven't cached yet.
-      const masterIds = [
-        ...new Set(
-          result.releases
-            .map((r) => r.basic_information?.master_id)
-            .filter((id): id is number => typeof id === 'number'),
-        ),
-      ]
-      let knownYears = await getMasterYears().catch(() => ({} as MasterYears))
-      const missing = masterIds.filter((id) => !(id in knownYears))
-      if (missing.length > 0) {
-        const fetched = await fetchMasterYears(
-          missing,
-          settings.token,
-          (loaded, total) => {
-            if (!controller.signal.aborted) setProgress({ phase: 'years', loaded, total })
-          },
-          controller.signal,
-        )
-        knownYears = { ...knownYears, ...fetched }
-        await setMasterYears(knownYears)
-      }
-
-      if (controller.signal.aborted) return
-
+      // Content-first: show the collection immediately, then enrich original
+      // release years in the background so a slow master step never blocks the
+      // first paint. `status` stays 'loading' so the sync banner shows the year
+      // progress while the grid is already interactive.
       setReleases(result.releases)
-      setMasterYearsState(knownYears)
-      setProgress(null)
-      setStatus('idle')
       setFetchedAt(Date.now())
-
       await setCachedCollection(settings.username, {
         username: settings.username,
         fetchedAt: Date.now(),
@@ -138,6 +113,51 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
         items: result.items,
         folders,
       })
+
+      const masterIds = [
+        ...new Set(
+          result.releases
+            .map((r) => r.basic_information?.master_id)
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      ]
+
+      const knownYears = await getMasterYears().catch(() => ({} as MasterYears))
+      const missing = masterIds.filter((id) => !(id in knownYears))
+
+      if (missing.length > 0) {
+        let mergedYears = { ...knownYears }
+        try {
+          const fetched = await fetchMasterYears(
+            missing,
+            settings.token,
+            (loaded, total) => {
+              if (!controller.signal.aborted) setProgress({ phase: 'years', loaded, total })
+            },
+            controller.signal,
+            (id, year) => {
+              if (controller.signal.aborted) return
+              // New object each time so the state change is picked up.
+              mergedYears = { ...mergedYears, [id]: year }
+              setMasterYearsState(mergedYears)
+            },
+          )
+          mergedYears = { ...knownYears, ...fetched }
+        } catch (err) {
+          if (controller.signal.aborted) return
+          if (err instanceof DOMException && err.name === 'AbortError') return
+          // Year enrichment is a progressive nicety, not a hard failure:
+          // keep whatever already streamed in and finish loading.
+        }
+
+        if (controller.signal.aborted) return
+        setMasterYearsState(mergedYears)
+        await setMasterYears(mergedYears)
+      }
+
+      if (controller.signal.aborted) return
+      setProgress(null)
+      setStatus('idle')
     } catch (err) {
       if (controller.signal.aborted) return
       if (err instanceof DOMException && err.name === 'AbortError') return
