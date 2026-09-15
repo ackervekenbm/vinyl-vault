@@ -190,10 +190,28 @@ button:disabled {
 }
 
 .settings-sub {
-  margin: 0 0 22px;
+  margin: 0 0 6px;
   text-align: center;
   color: var(--text-dim);
   font-size: 14px;
+}
+
+.settings-build {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.settings-build a {
+  color: var(--text-faint);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.settings-build a:hover {
+  color: var(--text-dim);
 }
 
 .settings-form {
