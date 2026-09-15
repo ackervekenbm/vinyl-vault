@@ -343,7 +343,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
+  gap: 7px;
   /* Keep content clear of the iOS notch / dynamic island and the home
      indicator (viewport-fit=cover + black-translucent status bar). */
   height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
