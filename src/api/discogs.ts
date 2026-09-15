@@ -162,22 +162,36 @@ async function describeError(response: Response): Promise<string> {
   return message
 }
 
-// Year a master's music was originally released. Fetched per unique master,
-// paced to stay inside Discogs' rate limit. `null` = no usable year (kept in
-// the cache so we don't re-request known-missing masters on every sync).
+// Year a master's music was originally released. Fetched per unique master.
+// Discogs has no batch endpoint, so each id costs one request: the fetch runs
+// in small staggered batches to overlap request latency (much faster than
+// strictly serial), and pauses between batches so the average stays inside the
+// ~60 req/min rate limit. `null` = no usable year (kept in the cache so we
+// don't re-request known-missing masters on every sync).
+//
+// `onMasterYear` streams results as they arrive so callers can progressively
+// update the UI instead of blocking until every request has finished.
 export type MasterYears = Record<number, number | null>
+type MasterYearResult = number | null
 
 export async function fetchMasterYears(
   masterIds: number[],
   token: string,
   onProgress?: (loaded: number, total: number) => void,
   signal?: AbortSignal,
+  onMasterYear?: (masterId: number, year: MasterYearResult) => void,
 ): Promise<MasterYears> {
   const ids = [...new Set(masterIds)]
   const result: MasterYears = {}
+
+  const BATCH_SIZE = 6
+  const STAGGER_MS = 100
+  const BATCH_PAUSE_MS = 6600 // 6 requests / ~7.1s ≈ 51 req/min
   let done = 0
 
-  for (const id of ids) {
+  async function fetchYear(id: number, offset: number): Promise<MasterYearResult> {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    if (offset > 0) await sleep(offset * STAGGER_MS)
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
     const maxAttempts = 3
@@ -190,10 +204,7 @@ export async function fetchMasterYears(
         if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
           throw new DOMException('Aborted', 'AbortError')
         }
-        if (++attempts >= maxAttempts) {
-          result[id] = null
-          break
-        }
+        if (++attempts >= maxAttempts) return null
         await sleep(1200 * attempts)
         continue
       }
@@ -206,27 +217,30 @@ export async function fetchMasterYears(
 
       if (response.ok) {
         const master = (await response.json()) as DiscogsMaster
-        result[id] = typeof master.year === 'number' ? master.year : null
-        break
+        return typeof master.year === 'number' ? master.year : null
       }
 
-      if (response.status === 404) {
-        result[id] = null
-        break
-      }
+      if (response.status === 404) return null
 
-      if (++attempts >= maxAttempts) {
-        result[id] = null
-        break
-      }
+      if (++attempts >= maxAttempts) return null
       await sleep(1200 * attempts)
     }
+  }
 
-    done++
+  for (let offset = 0; offset < ids.length; offset += BATCH_SIZE) {
+    const batch = ids.slice(offset, offset + BATCH_SIZE)
+    const years = await Promise.all(batch.map((id, i) => fetchYear(id, i)))
+    batch.forEach((id, i) => {
+      result[id] = years[i]
+      onMasterYear?.(id, years[i])
+    })
+    done += batch.length
     onProgress?.(done, ids.length)
 
-    // Stay within ~60 req/min while many masters are pending.
-    if (ids.length > 1) await sleep(1100)
+    if (offset + BATCH_SIZE < ids.length) {
+      await sleep(BATCH_PAUSE_MS)
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    }
   }
 
   return result
