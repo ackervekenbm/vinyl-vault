@@ -2,6 +2,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type { Settings as SettingsType } from '../db/settings'
 import type { ThemeId } from '../theme'
 import { THEMES } from '../theme'
+import { VinylIcon } from './icons'
 
 interface SettingsProps {
   initial: SettingsType
@@ -43,7 +44,9 @@ export function SettingsForm({
           </button>
         )}
 
-        <div className="settings-logo">♫</div>
+        <div className="settings-logo">
+          <VinylIcon size={50} />
+        </div>
         <h1>Vinyl Vault</h1>
         <p className="settings-sub">Your Discogs collection, beautifully browsable.</p>
 

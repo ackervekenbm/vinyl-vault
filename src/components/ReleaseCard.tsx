@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import type { DisplayRelease } from '../utils/collection'
 import { effectiveYears } from '../utils/collection'
+import { VinylIcon } from './icons'
 
 interface ReleaseCardProps {
   display: DisplayRelease
@@ -37,7 +38,7 @@ export function ReleaseCard({ display, onOpen }: ReleaseCardProps) {
           />
         ) : (
           <div className="release-cover missing" aria-label="No cover art">
-            ♫
+            <VinylIcon size={22} />
           </div>
         )}
       </div>
