@@ -20,11 +20,13 @@ import {
   type ArtistSortMode,
 } from './utils/collection'
 import { SettingsForm } from './components/Settings'
+import { StorageStats } from './components/StorageStats'
+import { useScrollLock } from './hooks/useScrollLock'
 import { SearchBar } from './components/SearchBar'
 import { FiltersButton, FilterPanel } from './components/FilterMenu'
 import { ArtistSection } from './components/ArtistSection'
 import { ReleaseDetail } from './components/ReleaseDetail'
-import { SettingsIcon, RefreshIcon, ShuffleIcon } from './components/icons'
+import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon } from './components/icons'
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -51,6 +53,7 @@ export default function App() {
   const [settings, setSettings] = useState<SettingsType | null>(loadSettings)
   const [theme, setTheme] = useState<ThemeId>(settings?.theme ?? 'midnight')
   const [showSettings, setShowSettings] = useState<boolean>(() => !loadSettings())
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const {
     releases,
     folders,
@@ -66,6 +69,8 @@ export default function App() {
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
+
+  useScrollLock(showSettings)
 
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounced(query, 150)
@@ -158,21 +163,30 @@ export default function App() {
               theme={theme}
               onThemeChange={onThemeChange}
               onSave={onSaveSettings}
-            />
-            {settings && (
-              <div className="settings-extra">
-                <button type="button" className="secondary-btn" onClick={onClearData}>
-                  Clear local data
-                </button>
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={() => setShowSettings(false)}
-                >
-                  Close
-                </button>
-              </div>
-            )}
+              onClose={settings ? () => setShowSettings(false) : undefined}
+            >
+              {settings && (
+                <section className="advanced-section">
+                  <button
+                    type="button"
+                    className="advanced-toggle"
+                    onClick={() => setAdvancedOpen((open) => !open)}
+                    aria-expanded={advancedOpen}
+                    aria-controls="advanced-panel"
+                  >
+                    <span>Advanced</span>
+                    <span className="collapse-indicator" aria-hidden="true">
+                      <ChevronIcon direction={advancedOpen ? 'up' : 'down'} />
+                    </span>
+                  </button>
+                  {advancedOpen && (
+                    <div id="advanced-panel" className="advanced-body">
+                      <StorageStats username={settings.username} onClearData={onClearData} />
+                    </div>
+                  )}
+                </section>
+              )}
+            </SettingsForm>
           </div>
         </div>
       )}
