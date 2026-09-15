@@ -123,7 +123,11 @@ If you do want a true offline-capable install (open the app with the server down
 
 ```
 ├── Dockerfile / docker-compose.yml / nginx.conf   # containerized hosting
-├── .github/workflows/docker-build.yml             # publish multi-arch image to GHCR
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml             # PR checks (type-check + lint + build)
+│   │   └── docker-build.yml   # publish multi-arch image to GHCR
+│   └── dependabot.yml         # weekly dependency-update PRs
 ├── eslint.config.js                               # ESLint flat config
 ├── index.html                                     # app shell + PWA/iOS meta tags
 ├── vite.config.ts                                 # build + PWA configuration
