@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import type { Settings as SettingsType } from '../db/settings'
 import type { ThemeId } from '../theme'
 import { THEMES } from '../theme'
@@ -8,9 +8,18 @@ interface SettingsProps {
   theme: ThemeId
   onThemeChange: (theme: ThemeId) => void
   onSave: (settings: SettingsType) => void
+  onClose?: () => void
+  children?: ReactNode
 }
 
-export function SettingsForm({ initial, theme, onThemeChange, onSave }: SettingsProps) {
+export function SettingsForm({
+  initial,
+  theme,
+  onThemeChange,
+  onSave,
+  onClose,
+  children,
+}: SettingsProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
@@ -23,6 +32,17 @@ export function SettingsForm({ initial, theme, onThemeChange, onSave }: Settings
   return (
     <div className="settings-wrap">
       <div className="settings-card">
+        {onClose && (
+          <button
+            type="button"
+            className="card-close"
+            onClick={onClose}
+            aria-label="Close settings"
+          >
+            ×
+          </button>
+        )}
+
         <div className="settings-logo">♫</div>
         <h1>Vinyl Vault</h1>
         <p className="settings-sub">Your Discogs collection, beautifully browsable.</p>
@@ -122,6 +142,8 @@ export function SettingsForm({ initial, theme, onThemeChange, onSave }: Settings
             ))}
           </div>
         </div>
+
+        {children}
       </div>
     </div>
   )
