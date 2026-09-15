@@ -89,23 +89,25 @@ sudo docker compose up -d --build
 Notes:
 - **No volumes needed** — the container is pure static hosting; every user's data lives in the browser. Recreates/updates are lossless.
 - **To update later:** `git pull && sudo docker compose up -d --build` in the same folder.
-- **PWA install needs HTTPS.** Over plain LAN HTTP the app works fine in a browser, but the service worker / "Add to Home Screen" install requires a secure context. If you want installable PWA on the Pi, put a TLS reverse proxy in front: OMV's **Reverse Proxy plugin (nginx + Let's Encrypt)** or a small Caddy container.
+- **Home-screen shortcut works over plain HTTP; offline install needs HTTPS.** "Add to Home Screen" works over HTTP (the page ships the legacy `apple-touch-icon` / `apple-mobile-web-app-capable` tags). The service worker — and therefore launching the app *with the Pi powered off* — requires a secure context. See [Install on your iPhone](#install-on-your-iphone).
 
-## Install as a PWA on your iPhone
+## Install on your iPhone
 
-1. Serve the app over **HTTPS** (required by iOS — see below) and open it in Safari.
+iOS treats "Add to Home Screen" as a bookmark, so it works over **plain HTTP** — no HTTPS or device setup required:
+
+1. Open the app in Safari.
 2. Tap **Share** → **Add to Home Screen**.
-3. It opens full-screen with the Vinyl Vault icon.
+3. It launches standalone with the Vinyl Vault icon (the app ships the legacy `apple-mobile-web-app-capable` and `apple-touch-icon` tags, which iOS honors over HTTP).
 
-For testing, `localhost` is exempt from the HTTPS requirement, but a real install needs a secure origin.
+The one thing an HTTP shortcut doesn't get is the **service worker**, so launching it always requires the server to be reachable — there is no offline start while the Pi is powered off. Your collection, settings and tracklists still live in IndexedDB either way. For a self-hosted LAN setup where the server is essentially always on, plain HTTP is usually fine.
 
-### HTTPS options
+If you do want a true offline-capable install (open the app with the server down), the service worker needs a **secure context (HTTPS)** — and the certificate must be one the device trusts, since Safari and Android refuse or warn on certificates from unknown issuers. Security-wise, self-signed certs encrypt fine; the warning is purely about trust: either the device already trusts the issuer (a public CA) or you teach it to trust yours. From least to most setup:
 
-| Option | What to do |
-| --- | --- |
-| Free static host | Deploy the built `dist/` folder to **Cloudflare Pages**, **Netlify** or **Vercel** — auto-HTTPS, works with the Docker image's output exactly as-is. |
-| Self-hosted | Put Caddy in front of the container; it provisions Let's Encrypt certificates automatically. Point a domain at your host and add a Caddyfile line for it. |
-| Tailscale | Serve over your tailnet with a `tailscale cert` for personal/private use. |
+| Approach | What's needed | Notes |
+| --- | --- | --- |
+| **mkcert — your own local CA** | Install your CA profile once on each device | Fully self-hosted and offline; no external party involved |
+| **Domain + Let's Encrypt** (DuckDNS + Caddy/nginx) | A free domain and a TLS reverse proxy; use the **DNS-01** challenge so no ports need to be opened | Public CA, so devices trust it with zero setup |
+| **Tailscale** | Tailscale on the Pi and your devices | Free, auto-renewing Let's Encrypt certs on your private tailnet via `tailscale serve` |
 
 ## Scripts
 
