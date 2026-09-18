@@ -4,6 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   server: {
+    port: 5199,
+    strictPort: false,
     watch: {
       usePolling: true,
       interval: 150,
