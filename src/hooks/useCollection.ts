@@ -54,6 +54,9 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
   const account = useMemo(
     () =>
       settings ? { username: settings.username, token: settings.token } : null,
+    // Intentionally only the account fields: preference changes (e.g. theme)
+    // must not change the memo identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [settings?.username, settings?.token],
   )
 
