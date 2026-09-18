@@ -179,20 +179,26 @@ async function describeError(response: Response): Promise<string> {
 // Discogs has no batch endpoint, so each id costs one request: the fetch runs
 // in small staggered batches to overlap request latency (much faster than
 // strictly serial), and pauses between batches so the average stays inside the
-// ~60 req/min rate limit. `null` = no usable year (kept in the cache so we
-// don't re-request known-missing masters on every sync).
+// ~60 req/min rate limit.
+//
+// Result semantics:
+// - a year (number) — original release year, cached.
+// - null — the master genuinely has no usable year, cached so we don't
+//   re-request known-missing masters on every sync.
+// - undefined — the fetch failed after retries (network, timeout, 5xx,
+//   rate-limit bail); NOT cached, so the master is retried next sync.
 //
 // `onMasterYear` streams results as they arrive so callers can progressively
 // update the UI instead of blocking until every request has finished.
 export type MasterYears = Record<number, number | null>
-type MasterYearResult = number | null
+type MasterYearResult = number | null | undefined
 
 export async function fetchMasterYears(
   masterIds: number[],
   token: string,
   onProgress?: (loaded: number, total: number) => void,
   signal?: AbortSignal,
-  onMasterYear?: (masterId: number, year: MasterYearResult) => void,
+  onMasterYear?: (masterId: number, year: number | null) => void,
 ): Promise<MasterYears> {
   const ids = [...new Set(masterIds)]
   const result: MasterYears = {}
@@ -219,13 +225,15 @@ export async function fetchMasterYears(
         // Same rule as requestJson: an internal timeout rejects the fetch but
         // only a caller abort actually cancels the sync.
         if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-        if (++attempts >= maxAttempts) return null
+        // Failed after retries: not cached, retried on the next sync.
+        if (++attempts >= maxAttempts) return undefined
         await sleep(1200 * attempts)
         continue
       }
 
       if (response.status === 429) {
-        if (++rateLimitAttempts >= maxRateLimitAttempts) return null
+        // Still throttled after several backoffs: not cached, retried later.
+        if (++rateLimitAttempts >= maxRateLimitAttempts) return undefined
         // Discogs sends Retry-After in seconds; sleep that long (capped) so a
         // throttled burst can cool down instead of immediately re-429ing.
         const retryAfterSeconds = Number(response.headers.get('Retry-After') ?? '') || 3
@@ -240,7 +248,8 @@ export async function fetchMasterYears(
 
       if (response.status === 404) return null
 
-      if (++attempts >= maxAttempts) return null
+      // Other HTTP error (5xx etc.), failed after retries: not cached.
+      if (++attempts >= maxAttempts) return undefined
       await sleep(1200 * attempts)
     }
   }
@@ -249,8 +258,10 @@ export async function fetchMasterYears(
     const batch = ids.slice(offset, offset + BATCH_SIZE)
     const years = await Promise.all(batch.map((id, i) => fetchYear(id, i)))
     batch.forEach((id, i) => {
-      result[id] = years[i]
-      onMasterYear?.(id, years[i])
+      const year = years[i]
+      if (year === undefined) return
+      result[id] = year
+      onMasterYear?.(id, year)
     })
     done += batch.length
     onProgress?.(done, ids.length)
