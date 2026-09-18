@@ -16,6 +16,7 @@ import {
   type CollectionResult,
   type MasterYears,
 } from '../api/discogs'
+import { clearAlbumArtCache } from '../utils/storage'
 import type { DiscogsCollectionFolder, DiscogsCollectionRelease } from '../types/discogs'
 
 export type Status = 'idle' | 'loading' | 'error'
@@ -186,9 +187,15 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
 
   const wipeCache = useCallback(async () => {
     if (!account) return
-    await removeCachedCollection(account.username)
-    await clearMasterYears()
-    await clearReleaseDetails()
+    // "Clear everything" must reclaim every byte, including the service-worker
+    // album-art runtime cache, and stop any collection sync still in flight.
+    abortRef.current?.abort()
+    await Promise.allSettled([
+      removeCachedCollection(account.username),
+      clearMasterYears(),
+      clearReleaseDetails(),
+      clearAlbumArtCache(),
+    ])
     setReleases([])
     setFolders([])
     setMasterYearsState({})
