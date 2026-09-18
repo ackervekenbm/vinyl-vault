@@ -195,7 +195,9 @@ export async function fetchMasterYears(
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
     const maxAttempts = 3
+    const maxRateLimitAttempts = 4
     let attempts = 0
+    let rateLimitAttempts = 0
     for (;;) {
       let response: Response
       try {
@@ -210,8 +212,11 @@ export async function fetchMasterYears(
       }
 
       if (response.status === 429) {
-        const retryAfter = Number(response.headers.get('Retry-After') ?? '') || 3000
-        await sleep(Math.min(retryAfter, 30000))
+        if (++rateLimitAttempts >= maxRateLimitAttempts) return null
+        // Discogs sends Retry-After in seconds; sleep that long (capped) so a
+        // throttled burst can cool down instead of immediately re-429ing.
+        const retryAfterSeconds = Number(response.headers.get('Retry-After') ?? '') || 3
+        await sleep(Math.min(retryAfterSeconds * 1000, 30000))
         continue
       }
 
