@@ -10,6 +10,9 @@ import type {
 
 const API_BASE = 'https://api.discogs.com'
 const USER_AGENT = 'VinylVault/0.1 (+local personal collection viewer)'
+// Cap how long a single request may take. Stalled connections (flaky proxy,
+// network pause, API hang) otherwise leave the sync spinning forever.
+const FETCH_TIMEOUT_MS = 20_000
 
 export class DiscogsError extends Error {
   status: number
@@ -24,15 +27,25 @@ export class DiscogsError extends Error {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function discogsFetch(path: string, token: string, signal?: AbortSignal): Promise<Response> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    signal,
-    headers: {
-      Authorization: `Discogs token=${token}`,
-      'User-Agent': USER_AGENT,
-      Accept: 'application/json',
-    },
-  })
-  return response
+  const controller = new AbortController()
+  const onCallerAbort = () => controller.abort()
+  if (signal?.aborted) onCallerAbort()
+  else signal?.addEventListener('abort', onCallerAbort, { once: true })
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    return await fetch(`${API_BASE}${path}`, {
+      signal: controller.signal,
+      headers: {
+        Authorization: `Discogs token=${token}`,
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json',
+      },
+    })
+  } finally {
+    clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', onCallerAbort)
+  }
 }
 
 export interface ProgressInfo {
@@ -111,10 +124,10 @@ async function requestJson<T>(
     let response: Response
     try {
       response = await discogsFetch(path, token, signal)
-    } catch (err) {
-      if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
-        throw new DOMException('Aborted', 'AbortError')
-      }
+    } catch {
+      // Only a caller-initiated abort cancels. The internal fetch timeout also
+      // rejects (AbortError) but must be retried like any network failure.
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       if (attempt >= maxRetries) throw new DiscogsError('Network error talking to Discogs.', 0)
       attempt++
       const wait = 1000 * 2 ** attempt + Math.random() * 400
@@ -202,10 +215,10 @@ export async function fetchMasterYears(
       let response: Response
       try {
         response = await discogsFetch(`/masters/${id}`, token, signal)
-      } catch (err) {
-        if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
-          throw new DOMException('Aborted', 'AbortError')
-        }
+      } catch {
+        // Same rule as requestJson: an internal timeout rejects the fetch but
+        // only a caller abort actually cancels the sync.
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
         if (++attempts >= maxAttempts) return null
         await sleep(1200 * attempts)
         continue
