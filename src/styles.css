@@ -148,8 +148,10 @@ button:disabled {
   -webkit-backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
-  padding: calc(20px + env(safe-area-inset-top, 0px)) 20px
-    calc(20px + env(safe-area-inset-bottom, 0px));
+  padding: calc(20px + env(safe-area-inset-top, 0px))
+    calc(20px + env(safe-area-inset-right, 0px))
+    calc(20px + env(safe-area-inset-bottom, 0px))
+    calc(20px + env(safe-area-inset-left, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 50;
@@ -548,7 +550,8 @@ button:disabled {
 .app {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0 16px 64px;
+  padding: 0 calc(16px + env(safe-area-inset-left, 0px)) 64px
+    calc(16px + env(safe-area-inset-right, 0px));
 }
 
 .app-header {
@@ -560,15 +563,22 @@ button:disabled {
   justify-content: center;
   gap: 7px;
   /* Keep content clear of the iOS notch / dynamic island and the home
-     indicator (viewport-fit=cover + black-translucent status bar). */
+     indicator (viewport-fit=cover + black-translucent status bar). In
+     landscape the island sits on the left or right edge, hence the
+     horizontal insets. */
   height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 7px;
+  padding: calc(6px + env(safe-area-inset-top, 0px))
+    calc(16px + env(safe-area-inset-right, 0px)) 7px
+    calc(16px + env(safe-area-inset-left, 0px));
   background: var(--bg);
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  margin: 0 -16px;
+  /* Pull full-bleed against the .app insets, then let the safe-area
+     padding nudge the content itself clear of the edge/corners. */
+  margin: 0 calc(env(safe-area-inset-right, 0px) - 16px) 0
+    calc(env(safe-area-inset-left, 0px) - 16px);
 }
 
 .header-top {
@@ -1057,7 +1067,10 @@ button:disabled {
   -webkit-backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: calc(20px + env(safe-area-inset-top, 0px))
+    calc(20px + env(safe-area-inset-right, 0px))
+    calc(20px + env(safe-area-inset-bottom, 0px))
+    calc(20px + env(safe-area-inset-left, 0px));
   overflow-y: auto;
   /* Don't let swiping past the modal's scroll edges push the page behind it. */
   overscroll-behavior: contain;
@@ -1097,7 +1110,7 @@ button:disabled {
 
 .random-fab {
   position: fixed;
-  right: 20px;
+  right: calc(20px + env(safe-area-inset-right, 0px));
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 70;
   width: 54px;
