@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Settings } from '../db/settings'
 import {
   getCachedCollection,
@@ -49,6 +49,16 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
   const [fetchedAt, setFetchedAt] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
+  // Account identity, independent of preference fields like theme. Effects key
+  // on this so appearance-only settings changes don't re-fetch the collection.
+  const account = useMemo(
+    () =>
+      settings ? { username: settings.username, token: settings.token } : null,
+    // Intentionally only the account fields: preference changes (e.g. theme)
+    // must not change the memo identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings?.username, settings?.token],
+  )
 
   useEffect(() => {
     return () => {
@@ -56,7 +66,7 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
     }
   }, [])
 
-  const load = useCallback(async (settings: Settings) => {
+  const load = useCallback(async (account: Pick<Settings, 'username' | 'token'>) => {
     const controller = new AbortController()
     abortRef.current?.abort()
     abortRef.current = controller
@@ -67,7 +77,7 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
     // Attempt to show cache immediately (stale-while-revalidate)
     try {
       const [cached, years] = await Promise.all([
-        getCachedCollection(settings.username),
+        getCachedCollection(account.username),
         getMasterYears(),
       ])
       if (controller.signal.aborted) return
@@ -85,13 +95,13 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
     setStatus('loading')
 
     try {
-      const folders = await fetchFolders(settings.username, settings.token, controller.signal)
+      const folders = await fetchFolders(account.username, account.token, controller.signal)
       if (controller.signal.aborted) return
       setFolders(folders)
 
       const result: CollectionResult = await fetchCollection(
-        settings.username,
-        settings.token,
+        account.username,
+        account.token,
         (p) => {
           if (!controller.signal.aborted) setProgress({ phase: 'collection', ...p })
         },
@@ -106,8 +116,8 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
       // progress while the grid is already interactive.
       setReleases(result.releases)
       setFetchedAt(Date.now())
-      await setCachedCollection(settings.username, {
-        username: settings.username,
+      await setCachedCollection(account.username, {
+        username: account.username,
         fetchedAt: Date.now(),
         releases: result.releases,
         items: result.items,
@@ -130,7 +140,7 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
         try {
           const fetched = await fetchMasterYears(
             missing,
-            settings.token,
+            account.token,
             (loaded, total) => {
               if (!controller.signal.aborted) setProgress({ phase: 'years', loaded, total })
             },
@@ -170,24 +180,24 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
   }, [])
 
   const refresh = useCallback(() => {
-    if (!settings) return
-    load(settings)
-  }, [settings, load])
+    if (!account) return
+    void load(account)
+  }, [account, load])
 
   const wipeCache = useCallback(async () => {
-    if (!settings) return
-    await removeCachedCollection(settings.username)
+    if (!account) return
+    await removeCachedCollection(account.username)
     await clearMasterYears()
     await clearReleaseDetails()
     setReleases([])
     setFolders([])
     setMasterYearsState({})
     setStatus('idle')
-  }, [settings])
+  }, [account])
 
-  // Load on mount and when settings change
+  // Load on mount and when the account changes.
   useEffect(() => {
-    if (!settings) {
+    if (!account) {
       // Reset all state when the account is cleared.
       /* eslint-disable react-hooks/set-state-in-effect */
       setReleases([])
@@ -199,8 +209,11 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
       /* eslint-enable react-hooks/set-state-in-effect */
       return
     }
-    load(settings)
-  }, [settings, load])
+    void load(account)
+    // Intentionally keyed on the account, not the whole settings object, so
+    // preference-only changes (e.g. the UI theme) don't re-fetch the whole
+    // collection. load() itself is stable.
+  }, [account, load])
 
   return { releases, folders, masterYears, status, error, progress, fetchedAt, refresh, wipeCache }
 }

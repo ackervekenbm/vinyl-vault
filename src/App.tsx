@@ -80,8 +80,12 @@ export default function App() {
   const [artistSortMode, setArtistSortMode] = useState<ArtistSortMode>('chronological')
   const [selected, setSelected] = useState<DisplayRelease | null>(null)
 
+  const accountKey = settings ? `${settings.username}\u0001${settings.token}` : ''
+
   useEffect(() => {
-    // Reset the browsing state for a new account.
+    // Reset the browsing state for a new account only. Keying on the whole
+    // settings object would also wipe search/filters/sort whenever a
+    // preference (e.g. the UI theme) changes for the same account.
     /* eslint-disable react-hooks/set-state-in-effect */
     setQuery('')
     setFilters(DEFAULT_FILTERS)
@@ -89,7 +93,7 @@ export default function App() {
     setArtistSortMode('chronological')
     setSelected(null)
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [settings])
+  }, [accountKey])
 
   const folderReleases = useMemo(() => {
     if (folderId === 0) return releases
