@@ -30,7 +30,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Enter your Discogs username and personal access token on the first screen — they're stored only in your browser's localStorage.
+Open <http://localhost:5199>. Enter your Discogs username and personal access token on the first screen — they're stored only in your browser's localStorage. (If 5199 is taken, Vite automatically moves to the next free port and prints the address.)
 
 ## Run it in Docker
 
