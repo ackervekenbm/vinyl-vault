@@ -45,6 +45,10 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
   enrichment runs in the background and streams in batches.
 - `src/api/discogs.ts` — raw Discogs calls, ~60 req/min budget. Master-year
   fetch uses staggered batches of 6 + 6.6s pauses; 429s retry via `Retry-After`.
+  All calls go through the same-origin `/discogs` proxy (vite dev + nginx) —
+  the app must never call `api.discogs.com` cross-origin, because Discogs' 429s
+  carry no CORS headers and the browser would mask throttling as an opaque
+  CORS error.
 - `src/db/collection.ts` — IndexedDB `vinyl-vault` (idb lib), three stores:
   `collection` (1 row/username), `masterYears` (1 row), `releaseDetails`
   (unbounded tracklist cache — the app's main space grower).
