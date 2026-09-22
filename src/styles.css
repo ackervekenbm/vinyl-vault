@@ -550,8 +550,8 @@ button:disabled {
 .app {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0 calc(16px + env(safe-area-inset-left, 0px)) 64px
-    calc(16px + env(safe-area-inset-right, 0px));
+  padding: 0 calc(16px + env(safe-area-inset-right, 0px)) 64px
+    calc(16px + env(safe-area-inset-left, 0px));
 }
 
 .app-header {
@@ -575,10 +575,14 @@ button:disabled {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  /* Pull full-bleed against the .app insets, then let the safe-area
-     padding nudge the content itself clear of the edge/corners. */
-  margin: 0 calc(env(safe-area-inset-right, 0px) - 16px) 0
-    calc(env(safe-area-inset-left, 0px) - 16px);
+  /* Break fully out of the .app content box so the header background
+     spans edge-to-edge (off the safe-area insets). Its own padding then
+     nudges the content back to exactly the .app content edges, keeping
+     the title/actions aligned with the cards scrolling below in every
+     orientation. A partial breakout (cancelling only the 16px gutter) left
+     the header inset by the safe-area amount in landscape. */
+  margin: 0 calc(-16px - env(safe-area-inset-right, 0px)) 0
+    calc(-16px - env(safe-area-inset-left, 0px));
 }
 
 .header-top {
