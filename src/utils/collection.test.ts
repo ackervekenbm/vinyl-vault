@@ -1,0 +1,337 @@
+import { describe, expect, it } from 'vitest'
+import {
+  activeFilterCount,
+  artistDisplayName,
+  countUniqueAlbums,
+  creditedArtists,
+  distinctFormats,
+  distinctGenres,
+  distinctLabels,
+  distinctStyles,
+  effectiveYears,
+  filterReleases,
+  groupReleases,
+  toDisplayRelease,
+  yearBounds,
+  DEFAULT_FILTERS,
+  type FilterOptions,
+} from './collection'
+import { artist, release } from '../test/factories'
+
+const basic = release().basic_information
+
+describe('artistDisplayName', () => {
+  it('prefers the name, trimming trailing disambiguation numbers', () => {
+    expect(artistDisplayName(artist({ name: 'The Cure (2)' }))).toBe('The Cure')
+  })
+
+  it('falls back to the anv', () => {
+    expect(artistDisplayName(artist({ name: '', anv: 'Smashing Pumpkins' }))).toBe(
+      'Smashing Pumpkins',
+    )
+  })
+
+  it('labels empty artists as unknown', () => {
+    expect(artistDisplayName(artist({ name: '', anv: '' }))).toBe('Unknown artist')
+    expect(artistDisplayName(artist({ name: '   ' }))).toBe('Unknown artist')
+  })
+})
+
+describe('creditedArtists', () => {
+  it('joins artists with their join tokens', () => {
+    const result = creditedArtists([
+      artist({ name: 'A' }),
+      artist({ name: 'B', join: '&' }),
+      artist({ name: 'C', join: ' & ' }),
+    ])
+    expect(result).toBe('A, B & C')
+  })
+
+  it('defaults the separator to a comma', () => {
+    expect(creditedArtists([artist({ name: 'A' }), artist({ name: 'B' })])).toBe('A, B')
+  })
+
+  it('returns Unknown artist for no artists', () => {
+    expect(creditedArtists([])).toBe('Unknown artist')
+  })
+})
+
+describe('toDisplayRelease', () => {
+  it('uses the master year when available for the original year', () => {
+    const display = toDisplayRelease(release(), { 900: 1975 })
+    expect(display.originalYear).toBe(1975)
+    expect(display.year).toBe(basic.year)
+  })
+
+  it('falls back to the basic-information year without a master year', () => {
+    const display = toDisplayRelease(release({ basic_information: { ...basic, master_id: null } }))
+    expect(display.originalYear).toBe(basic.year)
+  })
+
+  it('defaults missing titles and artists', () => {
+    const display = toDisplayRelease(
+      release({
+        id: 5,
+        instance_id: 6,
+        basic_information: { ...basic, title: '', artists: [] },
+      }),
+    )
+    expect(display.title).toBe('Untitled')
+    expect(display.artistName).toBe('Unknown artist')
+  })
+
+  it('builds a deterministic key from id and instance id', () => {
+    const a = toDisplayRelease(release({ id: 10, instance_id: 20 }))
+    const b = toDisplayRelease(release({ id: 10, instance_id: 20 }))
+    expect(a.key).toBe('10-20')
+    expect(a.key).toBe(b.key)
+  })
+
+  it('joins format names into a display string', () => {
+    const display = toDisplayRelease(
+      release({
+        basic_information: {
+          ...basic,
+          formats: [
+            { name: 'LP', qty: '2', descriptions: ['Album', 'Reissue'] },
+            { name: 'CD', qty: '1', descriptions: [] },
+          ],
+        },
+      }),
+    )
+    expect(display.formatNames).toEqual(['LP', 'CD'])
+    expect(display.formatText).toBe('LP · Album · Reissue / CD')
+  })
+})
+
+describe('filterReleases', () => {
+  // Every field is set explicitly so expectations don't depend on factory
+  // defaults: titles Blue/Green/Blue Train/The Wall; genres Rock/Jazz/Pop;
+  // styles Prog/Cool; labels Vertigo/Blue Note/Harvest; formats LP/CD.
+  const releases = [
+    release({
+      id: 1,
+      instance_id: 11,
+      basic_information: { ...basic, title: 'Blue', genres: ['Rock'], styles: ['Prog'], labels: [{ id: 1, name: 'Vertigo', catno: '', resource_url: '' }], year: 1999, formats: [{ name: 'LP', qty: '1' }] },
+    }),
+    release({
+      id: 2,
+      instance_id: 12,
+      basic_information: { ...basic, title: 'Green', genres: ['Jazz'], styles: ['Cool'], labels: [{ id: 2, name: 'Blue Note', catno: '', resource_url: '' }], year: 2001, formats: [{ name: 'CD', qty: '1' }] },
+    }),
+    release({
+      id: 3,
+      instance_id: 13,
+      basic_information: { ...basic, title: 'Blue Train', genres: ['Pop', 'Jazz'], styles: ['Cool'], labels: [{ id: 2, name: 'Blue Note', catno: '', resource_url: '' }], year: 1957, formats: [{ name: 'LP', qty: '1' }, { name: 'CD', qty: '1' }] },
+    }),
+    release({
+      id: 4,
+      instance_id: 14,
+      basic_information: { ...basic, title: 'The Wall', genres: ['Rock'], styles: ['Prog'], labels: [{ id: 3, name: 'Harvest', catno: '', resource_url: '' }], year: 1979, formats: [{ name: 'LP', qty: '1' }] },
+    }),
+  ]
+
+  const ids = (opts: FilterOptions): number[] =>
+    filterReleases(releases, opts).map((r) => r.id)
+
+  it('returns the input unchanged when no options are set', () => {
+    expect(filterReleases(releases, { ...DEFAULT_FILTERS, query: '' })).toBe(releases)
+  })
+
+  it('filters by a case-insensitive genre match', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: '', genre: 'jAzZ' })).toEqual([2, 3])
+  })
+
+  it('filters by style', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: '', style: 'cool' })).toEqual([2, 3])
+  })
+
+  it('filters by label', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: '', label: 'blue note' })).toEqual([2, 3])
+  })
+
+  it('filters by format name or description', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: '', format: 'LP' })).toEqual([1, 3, 4])
+    expect(ids({ ...DEFAULT_FILTERS, query: '', format: 'CD' })).toEqual([2, 3])
+  })
+
+  it('filters by year range using the basic year when no masters are known', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: '', yearMin: 1970 })).toEqual([1, 2, 4])
+    expect(ids({ ...DEFAULT_FILTERS, query: '', yearMax: 2000 })).toEqual([1, 3, 4])
+  })
+
+  it('filters by year range using master years when known', () => {
+    const withMasters = { 900: 1972, 901: 2001, 902: 1957 }
+    const yearReleases = [
+      release({ id: 1, basic_information: { ...basic, year: 1990, master_id: 900, title: 'a' } }),
+      release({ id: 2, basic_information: { ...basic, year: 1990, master_id: 901, title: 'b' } }),
+      release({ id: 3, basic_information: { ...basic, year: 1990, master_id: 902, title: 'c' } }),
+    ]
+    const from1990 = filterReleases(
+      yearReleases,
+      { ...DEFAULT_FILTERS, query: '', yearMin: 1990 },
+      withMasters,
+    )
+    expect(from1990.map((r) => r.id)).toEqual([2])
+    const until2000 = filterReleases(
+      yearReleases,
+      { ...DEFAULT_FILTERS, query: '', yearMax: 2000 },
+      withMasters,
+    )
+    expect(until2000.map((r) => r.id)).toEqual([1, 3])
+  })
+
+  it('searches title, artists, labels and years', () => {
+    expect(ids({ ...DEFAULT_FILTERS, query: 'train' })).toEqual([3])
+    expect(ids({ ...DEFAULT_FILTERS, query: 'blue' })).toEqual([1, 2, 3]) // Blue Note label too
+    expect(ids({ ...DEFAULT_FILTERS, query: 'test artist' })).toEqual([1, 2, 3, 4])
+    expect(ids({ ...DEFAULT_FILTERS, query: '2001' })).toEqual([2])
+  })
+
+  it('does not crash when query is missing entirely', () => {
+    // FilterOptions requires query at the type level, but legacy/serialized
+    // filters may lack it; the runtime guards against that.
+    const legacy = { ...DEFAULT_FILTERS } as Partial<FilterOptions>
+    delete legacy.query
+    expect(filterReleases(releases, legacy as FilterOptions)).toBe(releases)
+  })
+})
+
+describe('distinct*', () => {
+  const releases = [
+    release({
+      basic_information: {
+        ...basic,
+        genres: ['Rock', 'Jazz'],
+        styles: ['A', 'B'],
+        formats: [
+          { name: 'LP', qty: '1' },
+          { name: 'LP', qty: '1' },
+        ],
+        labels: [
+          { ...basic.labels[0], name: 'X' },
+          { name: 'Y', catno: '', id: 2, resource_url: '' },
+        ],
+      },
+    }),
+    release({
+      basic_information: {
+        ...basic,
+        genres: ['Rock'],
+        styles: ['B'],
+        labels: [{ name: 'Y', catno: '', id: 2, resource_url: '' }],
+      },
+    }),
+  ]
+
+  it('returns sorted, de-duplicated values', () => {
+    expect(distinctGenres(releases)).toEqual(['Jazz', 'Rock'])
+    expect(distinctStyles(releases)).toEqual(['A', 'B'])
+    expect(distinctFormats(releases)).toEqual(['LP'])
+    expect(distinctLabels(releases)).toEqual(['X', 'Y'])
+  })
+})
+
+describe('yearBounds', () => {
+  it('computes min and max, ignoring unknown years', () => {
+    const releases = [
+      release({ basic_information: { ...basic, year: 1957 } }),
+      release({ basic_information: { ...basic, year: 0 } }),
+      release({ basic_information: { ...basic, year: 2020 } }),
+    ]
+    expect(yearBounds(releases)).toEqual({ min: 1957, max: 2020 })
+  })
+
+  it('uses master years when present', () => {
+    const withMasters = { 900: 1975 }
+    const bounds = yearBounds([release({ basic_information: { ...basic, year: 2000 } })], withMasters)
+    expect(bounds).toEqual({ min: 1975, max: 1975 })
+  })
+
+  it('returns null for no usable years', () => {
+    expect(yearBounds([])).toBeNull()
+    expect(yearBounds([release({ basic_information: { ...basic, year: 0 } })])).toBeNull()
+  })
+})
+
+describe('countUniqueAlbums', () => {
+  it('counts masters once even with many instances', () => {
+    const releases = [
+      release({ id: 1, basic_information: { ...basic, master_id: 900 } }),
+      release({ id: 2, basic_information: { ...basic, master_id: 900 } }),
+      release({ id: 3, basic_information: { ...basic, master_id: null } }),
+      release({ id: 4, basic_information: { ...basic, master_id: null } }),
+    ]
+    expect(countUniqueAlbums(releases)).toBe(3)
+  })
+})
+
+describe('effectiveYears', () => {
+  it('shows a single line when original equals pressing', () => {
+    const display = toDisplayRelease(release(), { 900: 1985 })
+    expect(effectiveYears(display)).toEqual([{ value: 1985 }])
+  })
+
+  it('labels both lines when they differ', () => {
+    const display = toDisplayRelease(release({ basic_information: { ...basic, year: 2000 } }), {
+      900: 1975,
+    })
+    expect(effectiveYears(display)).toEqual([
+      { label: 'Original', value: 1975 },
+      { label: 'Pressing', value: 2000 },
+    ])
+  })
+
+  it('omits zero-unknown years', () => {
+    const display = toDisplayRelease(
+      release({ basic_information: { ...basic, year: 0, master_id: null } }),
+    )
+    expect(effectiveYears(display)).toEqual([])
+  })
+})
+
+describe('groupReleases', () => {
+  it('groups releases by artist and orders artists alphabetically', () => {
+    const groups = groupReleases([
+      release({ id: 1, basic_information: { ...basic, artists: [artist({ name: 'Zebra' })] } }),
+      release({ id: 2, basic_information: { ...basic, artists: [artist({ name: 'Apple' })] } }),
+    ])
+    expect(groups.map((g) => g.name)).toEqual(['Apple', 'Zebra'])
+    expect(groups[0].letter).toBe('A')
+  })
+
+  it('cross-lists multi-artist releases under every credited artist', () => {
+    const groups = groupReleases([
+      release({
+        id: 1,
+        basic_information: { ...basic, artists: [artist({ name: 'Alice' }), artist({ name: 'Bob', id: 2 })] },
+      }),
+    ])
+    expect(groups).toHaveLength(2)
+    expect(groups[0].releases[0].id).toBe(1)
+    expect(groups[1].releases[0].id).toBe(1)
+  })
+
+  it('keeps Various compilations in a single group', () => {
+    const groups = groupReleases([
+      release({
+        id: 1,
+        basic_information: {
+          ...basic,
+          artists: [artist({ name: 'Various' }), artist({ name: 'Alice' })],
+        },
+      }),
+    ])
+    expect(groups).toHaveLength(1)
+    expect(groups[0].name).toBe('Various')
+  })
+})
+
+describe('activeFilterCount', () => {
+  it('counts only non-default filters', () => {
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0)
+    expect(
+      activeFilterCount({ ...DEFAULT_FILTERS, genre: 'Rock', yearMin: 1970, yearMax: null }),
+    ).toBe(2)
+  })
+})

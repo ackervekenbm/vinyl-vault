@@ -22,9 +22,18 @@ export function loadSettings(): Settings | null {
 }
 
 export function saveSettings(settings: Settings): void {
-  localStorage.setItem(KEY, JSON.stringify(settings))
+  try {
+    localStorage.setItem(KEY, JSON.stringify(settings))
+  } catch {
+    // Storage can be blocked (quota, private mode, disabled cookies). The app
+    // should keep working in-memory rather than crash the save flow.
+  }
 }
 
 export function clearSettings(): void {
-  localStorage.removeItem(KEY)
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+    // Ignore; nothing else to do if storage is unavailable.
+  }
 }

@@ -125,8 +125,13 @@ export default function App() {
   const onThemeChange = (id: ThemeId) => {
     setTheme(id)
     const current = loadSettings()
-    saveSettings({ username: current?.username ?? '', token: current?.token ?? '', theme: id })
-    if (current) setSettings({ ...current, theme: id })
+    if (!current) {
+      // No saved account yet: the choice lives in App state and persists on
+      // the first settings save. Don't write empty credentials to storage.
+      return
+    }
+    saveSettings({ ...current, theme: id })
+    setSettings({ ...current, theme: id })
   }
 
   const onFolderChange = (id: number) => {

@@ -141,7 +141,7 @@ export function toDisplayRelease(
   const basic = release.basic_information ?? ({} as DiscogsCollectionRelease['basic_information'])
   const title = basic.title || 'Untitled'
   return {
-    key: `${release.id ?? '?'}-${release.instance_id ?? Math.random()}`,
+    key: `${release.id ?? '?'}-${release.instance_id ?? '?'}`,
     instanceId: release.instance_id,
     id: release.id,
     title,
@@ -165,7 +165,7 @@ export function filterReleases(
   options: FilterOptions,
   masterYears: MasterYears = {},
 ): DiscogsCollectionRelease[] {
-  const query = options.query.trim().toLowerCase()
+  const query = (options.query ?? '').trim().toLowerCase()
   const format = (options.format ?? '').trim().toLowerCase()
   const genre = (options.genre ?? '').trim().toLowerCase()
   const style = (options.style ?? '').trim().toLowerCase()
