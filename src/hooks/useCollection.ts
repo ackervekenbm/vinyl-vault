@@ -199,6 +199,7 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
     setReleases([])
     setFolders([])
     setMasterYearsState({})
+    setError(null)
     setStatus('idle')
   }, [account])
 

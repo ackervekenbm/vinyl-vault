@@ -8,12 +8,13 @@ browser (IndexedDB, localStorage, service-worker caches); there is no backend.
 
 ```bash
 npm install       # install deps (uses package-lock.json, commit it)
-npm run build     # = tsc --noEmit && eslint . && vite build  ← the verify step
+npm run build     # = tsc --noEmit && eslint . && vite build
+npm test          # unit tests (vitest, jsdom) — @testing-library/react
 ```
 
-There is **no unit-test suite**. `npm run build` (typecheck + lint + production
-build) is the required verification for every change. CI runs the `check` job
-(`npm ci && npm run build`) on every PR, and a green `check` is required to merge.
+**Verification for every change is `npm run build && npm test`.** CI runs the
+`check` job (`npm ci && npm run build && npm test`) on every PR, and a green
+`check` is required to merge. There is no other test suite.
 
 ## Issue-first workflow (MANDATORY)
 
