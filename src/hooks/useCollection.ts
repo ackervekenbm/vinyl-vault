@@ -129,7 +129,10 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
         ...new Set(
           result.releases
             .map((r) => r.basic_information?.master_id)
-            .filter((id): id is number => typeof id === 'number'),
+            // 0 is Discogs' "no master linked" marker, not a real id: those
+            // releases have no original year to fetch and fall back to their
+            // pressing year, so never request /masters/0.
+            .filter((id): id is number => typeof id === 'number' && id > 0),
         ),
       ]
 

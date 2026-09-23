@@ -303,7 +303,9 @@ export function countUniqueAlbums(releases: DiscogsCollectionRelease[]): number 
   const ids = new Set<number>()
   for (const release of releases) {
     const masterId = release.basic_information?.master_id
-    if (typeof masterId === 'number') masters.add(masterId)
+    // 0 is Discogs' "no master linked" marker: not a real master, and lumping
+    // every masterless release together as one fake album is wrong.
+    if (typeof masterId === 'number' && masterId > 0) masters.add(masterId)
     else ids.add(release.id)
   }
   return masters.size + ids.size

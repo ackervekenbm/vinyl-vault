@@ -8,7 +8,12 @@ import type {
   DiscogsTrack,
 } from '../types/discogs'
 
-const API_BASE = 'https://api.discogs.com'
+// Same-origin /discogs proxy (vite dev + nginx) for all API calls. The app
+// cannot call the API cross-origin: Discogs' 429 rate-limit responses carry no
+// Access-Control-Allow-Origin header, so the browser masks throttling as an
+// opaque CORS error and year enrichment can never finish. Through the proxy a
+// 429 is a normal, Retry-After-retryable response.
+const API_BASE = '/discogs'
 const USER_AGENT = 'VinylVault/0.1 (+local personal collection viewer)'
 // Cap how long a single request may take. Stalled connections (flaky proxy,
 // network pause, API hang) otherwise leave the sync spinning forever.

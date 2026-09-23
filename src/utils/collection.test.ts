@@ -264,6 +264,14 @@ describe('countUniqueAlbums', () => {
     ]
     expect(countUniqueAlbums(releases)).toBe(3)
   })
+
+  it('does not lump masterless (master_id 0) releases into one album', () => {
+    const releases = [
+      release({ id: 1, basic_information: { ...basic, master_id: 0 } }),
+      release({ id: 2, basic_information: { ...basic, master_id: 0 } }),
+    ]
+    expect(countUniqueAlbums(releases)).toBe(2)
+  })
 })
 
 describe('effectiveYears', () => {

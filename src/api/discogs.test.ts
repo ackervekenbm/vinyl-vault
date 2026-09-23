@@ -6,7 +6,7 @@ import {
   fetchReleaseTracklist,
 } from './discogs'
 
-const API = 'https://api.discogs.com'
+const API = '/discogs'
 
 function json(
   body: unknown,
