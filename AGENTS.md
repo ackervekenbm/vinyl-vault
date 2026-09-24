@@ -37,6 +37,14 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
   → merge once `check` passes. Use `gh pr merge --squash` when asked to merge.
 - Commit messages are imperative, single-paragraph (plus context lines), and
   reference the fix: `Fixes #<n>`.
+- **Branch hygiene** — keep the workspace tidy:
+  - Always branch off the latest `main` before starting new work.
+  - After a PR lands (squash merged), GitHub auto-deletes the remote branch.
+    Also delete the local branch afterwards:
+    `git checkout main && git fetch --prune && git branch -D <branch>`.
+  - Periodically prune stale local branches whose remotes are already gone:
+    `git branch -vv` (look for `[origin/...: gone]`) or
+    `git fetch --prune && git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep gone`. Keep the workspace down to `main` plus active work branches.
 
 ## Architecture
 
