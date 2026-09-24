@@ -35,6 +35,8 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
 - After merging, GitHub auto-deletes the head branch (`delete-branch-on-merge` is on).
 - Pattern: create branch → implement → `npm run build` → push → `gh pr create`
   → merge once `check` passes. Use `gh pr merge --squash` when asked to merge.
+- **Never merge your own PR.** Ready PRs are handed over to a reviewer to merge;
+  if the author merges, the other party reviews the squash only after the fact.
 - Commit messages are imperative, single-paragraph (plus context lines), and
   reference the fix: `Fixes #<n>`.
 - **Branch hygiene** — keep the workspace tidy:
