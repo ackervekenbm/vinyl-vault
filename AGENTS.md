@@ -53,8 +53,9 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
   `collection` (1 row/username), `masterYears` (1 row), `releaseDetails`
   (unbounded tracklist cache — the app's main space grower).
   Bump `VERSION` to invalidate caches after a shape change.
-- `src/theme.ts` + `src/styles.css` — CSS-variable themes (`midnight`/`paper`/`club`);
-  new UI styles must use existing `--*` tokens, never hardcoded colors.
+- `src/theme.ts` + `src/styles.css` — CSS-variable themes
+  (`midnight`/`paper`/`club`/`forest`); new UI styles must use existing `--*`
+  tokens, never hardcoded colors.
 - PWA via `vite-plugin-pwa`: app-shell precache + `album-art` runtime cache
   (500 entries, 30-day expiry). `vite.config.ts`.
 
@@ -78,8 +79,50 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
 
 ## Deployment (internal)
 
+The production host is a Raspberry Pi running **OpenMediaVault**. OMV's web UI
+owns ports 80/443, so the app is exposed on host port **8080**. The container is
+stateless (nginx serving the static build + the `/discogs` proxy) — every user's
+data lives in the browser, so any redeploy is lossless and no volumes are needed.
+
 - Every `main` push with app paths re-builds the multi-arch image and pushes
   `ghcr.io/ackervekenbm/vinyl-vault:latest` (see `.github/workflows/docker-build.yml`).
-- OMV host redeploy: Services → Compose → Files → select `vinyl-vault.yml`
-  → **Pull** → **Up**. GHCR requires a classic-PAT `docker login ghcr.io -u ackervekenbm`
-  (stored per-host; re-login if expired). Container is stateless — redeploys are lossless.
+- **GHCR login (one-time per host).** GHCR requires a login even for public
+  images. Log in over SSH:
+  ```bash
+  sudo docker login ghcr.io -u ackervekenbm
+  ```
+  The password is a GitHub **classic** personal access token (fine-grained
+  tokens don't support GitHub Packages). Create one at
+  https://github.com/settings/tokens → *Tokens (classic)* → tick `read:packages`
+  (add `repo` too if you also `git pull` on the Pi with the same token). Keep
+  the expiry to ≤1 year and re-login when it lapses — a classic token can reach
+  everything your account can, so never paste it anywhere public.
+- **Route A — prebuilt image (all via the OMV web UI, no building on the Pi).**
+  With omv-extras installed and Docker + the Compose plugin enabled
+  (Services → Compose): create a compose file `vinyl-vault.yml`:
+  ```yaml
+  services:
+    vinyl-vault:
+      image: ghcr.io/ackervekenbm/vinyl-vault:latest
+      container_name: vinyl-vault
+      ports:
+        - "8080:80"
+      restart: unless-stopped
+  ```
+  Save → select it → **Up** (creates/starts the container; open
+  `http://<pi-ip>:8080`). To update after a merge: select → **Pull** → **Up**
+  (an unchanged image is a no-op). If **Pull** fails with an auth error, redo
+  the SSH login first. The app is plain HTTP: a normal phone refresh picks up
+  the new build (nginx never caches `index.html`); force-refresh once if a tab
+  looks stale.
+- **Route B — build on the Pi** (e.g. local variants):
+  ```bash
+  cd ~
+  git clone https://github.com/ackervekenbm/vinyl-vault.git && cd vinyl-vault
+  sudo docker compose up -d --build
+  ```
+  Update later with `git pull && sudo docker compose up -d --build`.
+- **Offline / iPhone over HTTP** — home-screen install works over plain HTTP via
+  the legacy `apple-*` meta tags; the service worker (and therefore offline
+  launch) needs HTTPS with a device-trusted cert. Options live in the README's
+  *Deployment* section.
