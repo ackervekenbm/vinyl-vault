@@ -1097,9 +1097,11 @@ button:disabled {
 }
 
 .card-close {
-  position: absolute;
+  position: sticky;
   top: 12px;
-  right: 12px;
+  margin-left: auto;
+  margin-bottom: -34px;
+  z-index: 1;
   width: 34px;
   height: 34px;
   padding: 0;
