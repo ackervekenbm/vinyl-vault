@@ -84,8 +84,6 @@ gh issue create --title "<what>" --body "..."   # → gives an issue number
 
 - Dependabot majors stay **enabled** (we watch how often majors recur) — do not
   add `ignore` rules without the maintainer asking.
-- **TypeScript ceiling: 6.0.3.** TS 7 is blocked by `typescript-eslint`'s peer
-  range `<6.1.0`. Bumping TS to 7.x will fail CI; don't attempt it.
 
 ## Deployment (internal)
 
