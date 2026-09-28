@@ -4,10 +4,13 @@ import {
   clearReleaseDetails,
   countReleaseDetails,
   getCachedCollection,
+  getCachedCollectionValue,
   getMasterYears,
   getReleaseTracklist,
   removeCachedCollection,
+  removeCachedCollectionValue,
   setCachedCollection,
+  setCachedCollectionValue,
   setMasterYears,
   setReleaseTracklist,
 } from './collection'
@@ -19,6 +22,8 @@ beforeEach(async () => {
   await clearReleaseDetails()
   await removeCachedCollection('alice')
   await removeCachedCollection('bob')
+  await removeCachedCollectionValue('alice')
+  await removeCachedCollectionValue('bob')
 })
 
 describe('collection store (fake IndexedDB)', () => {
@@ -72,5 +77,33 @@ describe('releaseDetails store', () => {
     expect(await countReleaseDetails()).toBe(2)
     await clearReleaseDetails()
     expect(await countReleaseDetails()).toBe(0)
+  })
+})
+describe('collectionValue store', () => {
+  const value = { minimum: '$120.50', median: '$640.00', maximum: '$4,200.00' }
+
+  it('is absent until something is cached', async () => {
+    expect(await getCachedCollectionValue('alice')).toBeUndefined()
+  })
+
+  it('keeps one valuation per account, not one shared row', async () => {
+    await setCachedCollectionValue('alice', { value, fetchedAt: 100 })
+    await setCachedCollectionValue('bob', {
+      value: { minimum: '$1', median: '$2', maximum: '$3' },
+      fetchedAt: 200,
+    })
+
+    expect(await getCachedCollectionValue('alice')).toEqual({ value, fetchedAt: 100 })
+    expect(await getCachedCollectionValue('bob')).toMatchObject({ fetchedAt: 200 })
+  })
+
+  it('removes the cached valuation for one account only', async () => {
+    await setCachedCollectionValue('alice', { value, fetchedAt: 1 })
+    await setCachedCollectionValue('bob', { value, fetchedAt: 1 })
+
+    await removeCachedCollectionValue('alice')
+
+    expect(await getCachedCollectionValue('alice')).toBeUndefined()
+    expect(await getCachedCollectionValue('bob')).toBeDefined()
   })
 })

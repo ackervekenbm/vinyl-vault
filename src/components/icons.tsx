@@ -44,6 +44,27 @@ interface ChevronIconProps extends IconProps {
   direction: 'up' | 'down'
 }
 
+export function StatsIcon({ size = 16 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M7 16v-4" />
+      <path d="M12 16V7" />
+      <path d="M17 16v-6" />
+    </svg>
+  )
+}
+
 export function FilterIcon({ size = 16 }: IconProps) {
   return (
     <svg
@@ -80,6 +101,24 @@ export function ShuffleIcon({ size = 16 }: IconProps) {
       <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2" />
       <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8" />
       <path d="m18 14 4 4-4 4" />
+    </svg>
+  )
+}
+
+export function CloseIcon({ size = 15 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
     </svg>
   )
 }

@@ -1,5 +1,10 @@
 import { openDB } from 'idb'
-import type { DiscogsCollectionFolder, DiscogsCollectionRelease, DiscogsTrack } from '../types/discogs'
+import type {
+  CollectionValue,
+  DiscogsCollectionFolder,
+  DiscogsCollectionRelease,
+  DiscogsTrack,
+} from '../types/discogs'
 import type { MasterYears } from '../api/discogs'
 
 export interface CachedCollection {
@@ -10,11 +15,17 @@ export interface CachedCollection {
   folders: DiscogsCollectionFolder[]
 }
 
+export interface CachedCollectionValue {
+  value: CollectionValue
+  fetchedAt: number
+}
+
 const DB_NAME = 'vinyl-vault'
 const STORE = 'collection'
 const MASTER_STORE = 'masterYears'
 const DETAIL_STORE = 'releaseDetails'
-const VERSION = 3
+const VALUE_STORE = 'collectionValue'
+const VERSION = 4
 const MASTER_KEY = 'all'
 
 const dbPromise = openDB(DB_NAME, VERSION, {
@@ -27,6 +38,9 @@ const dbPromise = openDB(DB_NAME, VERSION, {
     }
     if (!db.objectStoreNames.contains(DETAIL_STORE)) {
       db.createObjectStore(DETAIL_STORE)
+    }
+    if (!db.objectStoreNames.contains(VALUE_STORE)) {
+      db.createObjectStore(VALUE_STORE)
     }
   },
 })
@@ -81,4 +95,26 @@ export async function clearReleaseDetails(): Promise<void> {
 export async function countReleaseDetails(): Promise<number> {
   const db = await dbPromise
   return await db.count(DETAIL_STORE)
+}
+
+// Market value cache, one row per account: the valuation belongs to a
+// collection, so it is keyed by username rather than stored as one global row.
+export async function getCachedCollectionValue(
+  username: string,
+): Promise<CachedCollectionValue | undefined> {
+  const db = await dbPromise
+  return (await db.get(VALUE_STORE, username)) as CachedCollectionValue | undefined
+}
+
+export async function setCachedCollectionValue(
+  username: string,
+  entry: CachedCollectionValue,
+): Promise<void> {
+  const db = await dbPromise
+  await db.put(VALUE_STORE, entry, username)
+}
+
+export async function removeCachedCollectionValue(username: string): Promise<void> {
+  const db = await dbPromise
+  await db.delete(VALUE_STORE, username)
 }

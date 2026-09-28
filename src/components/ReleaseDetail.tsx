@@ -3,6 +3,7 @@ import type { DisplayRelease } from '../utils/collection'
 import { artistDisplayName, creditedArtists, effectiveYears } from '../utils/collection'
 import { useReleaseTracklist } from '../hooks/useReleaseTracklist'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { CloseIcon } from './icons'
 
 interface ReleaseDetailProps {
   display: DisplayRelease
@@ -54,7 +55,7 @@ export function ReleaseDetail({ display, token, onClose }: ReleaseDetailProps) {
           onClick={onClose}
           aria-label="Close release details"
         >
-          ×
+          <CloseIcon />
         </button>
 
         <div className="card-scroll">

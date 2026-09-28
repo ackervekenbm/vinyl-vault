@@ -1,4 +1,5 @@
 import type {
+  CollectionValue,
   DiscogsCollectionFolder,
   DiscogsCollectionFolderResponse,
   DiscogsCollectionRelease,
@@ -106,6 +107,51 @@ export async function fetchFolders(
     signal,
   )
   return data.folders ?? []
+}
+
+// Discogs' own valuation of the whole collection: the combined minimum, median
+// and maximum value of every item in it, derived from recent marketplace sales
+// history. One request for the entire collection, so unlike per-release pricing
+// this costs nothing against the rate limit no matter how large the collection
+// is.
+//
+// It is a user resource, so it needs the collection owner's token — the same
+// personal access token the collection itself is read with. Discogs answers in
+// the authenticated user's currency, baked into each figure as a formatted
+// string ("$1,737.04"); there is no currency code in the response.
+export async function fetchCollectionValue(
+  username: string,
+  token: string,
+  signal?: AbortSignal,
+): Promise<CollectionValue> {
+  const data = await requestJson<CollectionValueWire>(
+    `/users/${encodeURIComponent(username)}/collection/value`,
+    token,
+    signal,
+  )
+  return {
+    minimum: moneyString(data.minimum),
+    median: moneyString(data.median),
+    maximum: moneyString(data.maximum),
+  }
+}
+
+/** Raw wire shape of the collection/value endpoint. */
+interface CollectionValueWire {
+  minimum?: string | number
+  median?: string | number
+  maximum?: string | number
+}
+
+// A figure usually arrives as a display string with the currency symbol and
+// thousands separators already applied; plain numbers occur too. Either way it
+// is ready for display once coerced to a string. Anything missing becomes an
+// empty string rather than being formatted — there is no currency code to
+// format with.
+function moneyString(value: string | number | undefined): string {
+  if (typeof value === 'number') return Number.isFinite(value) ? value.toLocaleString() : ''
+  if (typeof value === 'string') return value.trim()
+  return ''
 }
 
 export async function fetchReleaseTracklist(
@@ -279,3 +325,4 @@ export async function fetchMasterYears(
 
   return result
 }
+
