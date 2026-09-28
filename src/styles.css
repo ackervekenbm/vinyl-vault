@@ -17,6 +17,7 @@
   --radius: 12px;
   --font-display: inherit;
   --header-h: 64px;
+  --card-pad: 28px;
 }
 
 /* ---------- Themes ---------- */
@@ -167,7 +168,7 @@ button:disabled {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 28px 28px 22px;
+  padding: var(--card-pad) var(--card-pad) 22px;
   max-height: calc(
     100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
   );
@@ -1087,7 +1088,7 @@ button:disabled {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 28px 28px 22px;
+  padding: var(--card-pad) var(--card-pad) 22px;
   max-height: calc(
     100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
   );
@@ -1097,10 +1098,15 @@ button:disabled {
 }
 
 .card-close {
+  --close-inset: 10px;
   position: sticky;
-  top: 12px;
+  top: var(--card-pad);
   margin-left: auto;
   margin-bottom: -34px;
+  transform: translate(
+    calc(var(--close-inset) - var(--card-pad)),
+    calc(var(--close-inset) - var(--card-pad))
+  );
   z-index: 1;
   width: 34px;
   height: 34px;
