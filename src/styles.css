@@ -1098,7 +1098,7 @@ button:disabled {
 }
 
 .card-close {
-  --close-inset: 10px;
+  --close-inset: 6px;
   position: sticky;
   top: var(--card-pad);
   margin-left: auto;
