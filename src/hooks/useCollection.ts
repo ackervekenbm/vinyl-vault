@@ -8,6 +8,7 @@ import {
   setMasterYears,
   clearMasterYears,
   clearReleaseDetails,
+  removeCachedCollectionValue,
 } from '../db/collection'
 import {
   fetchCollection,
@@ -197,6 +198,7 @@ export function useCollection(settings: Settings | null): UseCollectionResult {
       removeCachedCollection(account.username),
       clearMasterYears(),
       clearReleaseDetails(),
+      removeCachedCollectionValue(account.username),
       clearAlbumArtCache(),
     ])
     setReleases([])

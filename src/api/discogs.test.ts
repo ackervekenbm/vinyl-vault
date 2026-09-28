@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchCollection,
+  fetchCollectionValue,
   fetchFolders,
   fetchMasterYears,
   fetchReleaseTracklist,
@@ -220,5 +221,59 @@ describe('fetchReleaseTracklist', () => {
     await expect(fetchReleaseTracklist(5, 'tok')).resolves.toEqual([
       { position: 'A1', title: 'T', duration: '1:00' },
     ])
+  })
+})
+describe('fetchCollectionValue', () => {
+  it('asks the collection value endpoint with the owner token', async () => {
+    mockFetch(() =>
+      json({ minimum: '$1,737.04', median: '$5,234.56', maximum: '$9,999.99' }),
+    )
+
+    const value = await fetchCollectionValue('alice', 'tok')
+
+    expect(value).toEqual({
+      minimum: '$1,737.04',
+      median: '$5,234.56',
+      maximum: '$9,999.99',
+    })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toBe(`${API}/users/alice/collection/value`)
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Discogs token=tok' })
+  })
+
+  it('normalizes plain numbers and missing figures to display strings', async () => {
+    mockFetch(() => json({ minimum: 120.5 }))
+
+    const value = await fetchCollectionValue('alice', 'tok')
+
+    expect(value).toEqual({ minimum: '120.5', median: '', maximum: '' })
+  })
+
+  it('url-encodes the username', async () => {
+    mockFetch(() => json({ minimum: '$0' }))
+
+    await fetchCollectionValue('a b/c', 'tok')
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      `${API}/users/a%20b%2Fc/collection/value`,
+    )
+  })
+
+  it('surfaces a DiscogsError when the token is not the collection owner', async () => {
+    mockFetch(() => json({ message: 'You are not the owner of this collection' }, 403))
+    await expect(fetchCollectionValue('alice', 'other-tok')).rejects.toMatchObject({ status: 403 })
+  })
+
+  it('recovers from a 429 using Retry-After', async () => {
+    let calls = 0
+    mockFetch(() => {
+      if (calls++ === 0) return json({ message: 'rate limited' }, 429, { 'Retry-After': '1' })
+      return json({ minimum: '$1', median: '$2', maximum: '$3' })
+    })
+
+    const promise = fetchCollectionValue('alice', 'tok')
+    await vi.advanceTimersByTimeAsync(1000)
+    await expect(promise).resolves.toMatchObject({ median: '$2' })
+    expect(calls).toBe(2)
   })
 })

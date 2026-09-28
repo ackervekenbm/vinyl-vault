@@ -4,6 +4,7 @@ import { loadSettings, saveSettings, clearSettings } from './db/settings'
 import type { ThemeId } from './theme'
 import { applyTheme } from './theme'
 import { useCollection, type SyncProgress } from './hooks/useCollection'
+import { useCollectionValue } from './hooks/useCollectionValue'
 import {
   filterReleases,
   groupReleases,
@@ -26,7 +27,8 @@ import { SearchBar } from './components/SearchBar'
 import { FiltersButton, FilterPanel } from './components/FilterMenu'
 import { ArtistSection } from './components/ArtistSection'
 import { ReleaseDetail } from './components/ReleaseDetail'
-import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon, RecordPlayer } from './components/icons'
+import { StatsPanel } from './components/StatsPanel'
+import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon, RecordPlayer, StatsIcon } from './components/icons'
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -70,8 +72,6 @@ export default function App() {
     applyTheme(theme)
   }, [theme])
 
-  useScrollLock(showSettings)
-
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounced(query, 150)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
@@ -79,6 +79,27 @@ export default function App() {
   const [folderId, setFolderId] = useState(0)
   const [artistSortMode, setArtistSortMode] = useState<ArtistSortMode>('chronological')
   const [selected, setSelected] = useState<DisplayRelease | null>(null)
+  const [showStats, setShowStats] = useState(false)
+
+  // The valuation is a single cheap request, but it is still only asked for
+  // once the user actually opens the stats panel.
+  const valueAccount = useMemo(
+    () => (settings ? { username: settings.username, token: settings.token } : null),
+    // Intentionally only the account fields, for the same reason as `account`
+    // in useCollection: a preference change (e.g. the theme) must not change
+    // this identity and re-key the cached valuation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings?.username, settings?.token],
+  )
+  const collectionValue = useCollectionValue(valueAccount)
+  const openValue = collectionValue.open
+
+  useEffect(() => {
+    if (showStats) openValue()
+  }, [showStats, openValue])
+
+  useScrollLock(showSettings)
+  useScrollLock(showStats)
 
   const accountKey = settings ? `${settings.username}\u0001${settings.token}` : ''
 
@@ -248,6 +269,15 @@ export default function App() {
                 <button
                   type="button"
                   className="icon-btn"
+                  onClick={() => setShowStats(true)}
+                  title="Collection stats"
+                  aria-label="Collection stats"
+                >
+                  <StatsIcon />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
                   onClick={() => setShowSettings(true)}
                   title="Settings"
                   aria-label="Settings"
@@ -375,6 +405,16 @@ export default function App() {
           display={selected}
           token={settings?.token ?? ''}
           onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Collection stats overlay */}
+      {showStats && (
+        <StatsPanel
+          releases={releases}
+          masterYears={masterYears}
+          value={collectionValue}
+          onClose={() => setShowStats(false)}
         />
       )}
 

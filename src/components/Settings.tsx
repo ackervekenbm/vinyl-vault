@@ -2,7 +2,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type { Settings as SettingsType } from '../db/settings'
 import type { ThemeId } from '../theme'
 import { THEMES } from '../theme'
-import { VinylIcon } from './icons'
+import { VinylIcon, CloseIcon } from './icons'
 
 interface SettingsProps {
   initial: SettingsType
@@ -40,7 +40,7 @@ export function SettingsForm({
             onClick={onClose}
             aria-label="Close settings"
           >
-            ×
+            <CloseIcon />
           </button>
         )}
 

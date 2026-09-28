@@ -19,6 +19,7 @@ export interface DisplayRelease {
   coverImage: string
   thumb: string
   release: DiscogsCollectionRelease
+  dateAdded: string
 }
 
 export interface GroupedArtist {
@@ -157,6 +158,7 @@ export function toDisplayRelease(
     coverImage: coverImageOf(release),
     thumb: basic.thumb ?? '',
     release,
+    dateAdded: release.date_added ?? '',
   }
 }
 
@@ -334,3 +336,125 @@ export function effectiveYears(display: DisplayRelease): YearLine[] {
 }
 
 export type ArtistSortMode = 'chronological' | 'byName'
+
+export interface CountItem {
+  name: string
+  count: number
+}
+
+export interface YearBin {
+  year: number
+  count: number
+}
+
+export interface TimelineBin {
+  period: string // YYYY-MM
+  count: number
+  label: string
+}
+
+export interface CollectionStats {
+  totalReleases: number
+  uniqueAlbums: number
+  artists: number
+  topGenres: CountItem[]
+  topStyles: CountItem[]
+  topLabels: CountItem[]
+  topFormats: CountItem[]
+  yearDistribution: YearBin[]
+  acquisitionTimeline: TimelineBin[]
+}
+
+export function computeCollectionStats(
+  releases: DiscogsCollectionRelease[],
+  masterYears: MasterYears = {},
+): CollectionStats {
+  const displayList = releases.map((r) => toDisplayRelease(r, masterYears))
+  const uniqueAlbums = countUniqueAlbums(releases)
+  const grouped = groupReleases(releases, masterYears)
+  const artists = grouped.length
+  const totalReleases = releases.length
+
+  const genreMap = new Map<string, number>()
+  const styleMap = new Map<string, number>()
+  const labelMap = new Map<string, number>()
+  const formatMap = new Map<string, number>()
+  for (const d of displayList) {
+    for (const g of d.genres) {
+      if (!g) continue
+      genreMap.set(g, (genreMap.get(g) || 0) + 1)
+    }
+    for (const s of d.styles) {
+      if (!s) continue
+      styleMap.set(s, (styleMap.get(s) || 0) + 1)
+    }
+    for (const l of d.labels) {
+      if (!l) continue
+      labelMap.set(l, (labelMap.get(l) || 0) + 1)
+    }
+    for (const f of d.formatNames) {
+      if (!f) continue
+      formatMap.set(f, (formatMap.get(f) || 0) + 1)
+    }
+  }
+
+  const topGenres = [...genreMap.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 10)
+  const topStyles = [...styleMap.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 10)
+  const topLabels = [...labelMap.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 10)
+  const topFormats = [...formatMap.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 10)
+
+  const yearsMap = new Map<number, number>()
+  for (const d of displayList) {
+    const y = d.originalYear || d.year
+    if (y > 0) {
+      yearsMap.set(y, (yearsMap.get(y) || 0) + 1)
+    }
+  }
+  const yearDistribution = [...yearsMap.entries()]
+    .map(([year, count]) => ({ year, count }))
+    .sort((a, b) => a.year - b.year)
+
+  const timelineMap = new Map<string, number>()
+  for (const d of displayList) {
+    const da = d.dateAdded
+    if (!da) continue
+    const dt = new Date(da)
+    if (isNaN(dt.getTime())) continue
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`
+    timelineMap.set(key, (timelineMap.get(key) || 0) + 1)
+  }
+  const acquisitionTimeline = [...timelineMap.entries()]
+    .map(([period, count]) => {
+      const [y, m] = period.split('-')
+      const label = new Date(Number(y), Number(m) - 1).toLocaleDateString(undefined, {
+        month: 'short',
+        year: 'numeric',
+      })
+      return { period, count, label }
+    })
+    .sort((a, b) => a.period.localeCompare(b.period))
+
+  return {
+    totalReleases,
+    uniqueAlbums,
+    artists,
+    topGenres,
+    topStyles,
+    topLabels,
+    topFormats,
+    yearDistribution,
+    acquisitionTimeline,
+  }
+}

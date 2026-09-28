@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activeFilterCount,
   artistDisplayName,
+  computeCollectionStats,
   countUniqueAlbums,
   creditedArtists,
   distinctFormats,
@@ -341,5 +342,126 @@ describe('activeFilterCount', () => {
     expect(
       activeFilterCount({ ...DEFAULT_FILTERS, genre: 'Rock', yearMin: 1970, yearMax: null }),
     ).toBe(2)
+  })
+})
+describe('computeCollectionStats', () => {
+  const collection = [
+    release({
+      id: 1,
+      instance_id: 1,
+      date_added: '2021-03-04T10:00:00Z',
+      basic_information: {
+        ...basic,
+        year: 1971,
+        genres: ['Rock', 'Prog Rock'],
+        styles: ['Heavy Psych'],
+        labels: [{ name: 'Radar', catno: 'C1', id: 1, resource_url: '' }],
+        formats: [{ name: 'LP', qty: '1' }],
+        artists: [artist({ name: 'Rush' })],
+      },
+    }),
+    release({
+      id: 2,
+      instance_id: 2,
+      date_added: '2021-03-20T10:00:00Z',
+      basic_information: {
+        ...basic,
+        master_id: 901,
+        year: 1977,
+        genres: ['Rock'],
+        styles: ['Arena Rock', 'Heavy Psych'],
+        labels: [
+          { name: 'Radar', catno: 'C2', id: 1, resource_url: '' },
+          { name: 'Mercury', catno: 'C3', id: 2, resource_url: '' },
+        ],
+        formats: [{ name: 'LP', qty: '1' }],
+        artists: [artist({ name: 'Rush' })],
+      },
+    }),
+    release({
+      id: 3,
+      instance_id: 3,
+      date_added: '2022-11-02T10:00:00Z',
+      basic_information: {
+        ...basic,
+        master_id: 0,
+        year: 1985,
+        genres: ['Jazz'],
+        styles: ['Fusion'],
+        labels: [{ name: 'Blue Note', catno: 'C4', id: 3, resource_url: '' }],
+        formats: [{ name: 'CD', qty: '1' }],
+        artists: [artist({ name: 'Herbie Hancock' })],
+      },
+    }),
+  ]
+
+  it('reports totals scoped to the given releases', () => {
+    const stats = computeCollectionStats(collection, { 901: 1976 })
+    expect(stats.totalReleases).toBe(3)
+    expect(stats.uniqueAlbums).toBe(3)
+    expect(stats.artists).toBe(2)
+  })
+
+  it('ranks genres, styles, labels and formats by count', () => {
+    const stats = computeCollectionStats(collection, { 901: 1976 })
+    expect(stats.topGenres[0]).toEqual({ name: 'Rock', count: 2 })
+    expect(stats.topStyles[0]).toEqual({ name: 'Heavy Psych', count: 2 })
+    expect(stats.topLabels[0]).toEqual({ name: 'Radar', count: 2 })
+    expect(stats.topFormats).toEqual([
+      { name: 'LP', count: 2 },
+      { name: 'CD', count: 1 },
+    ])
+  })
+
+  it('caps the ranked lists at ten entries', () => {
+    const many = Array.from({ length: 15 }, (_, i) =>
+      release({
+        id: 100 + i,
+        instance_id: 100 + i,
+        basic_information: {
+          ...basic,
+          genres: [`Genre ${i}`],
+          styles: [`Style ${i}`],
+          labels: [{ name: `Label ${i}`, catno: 'x', id: i, resource_url: '' }],
+        },
+      }),
+    )
+    const stats = computeCollectionStats(many)
+    expect(stats.topGenres).toHaveLength(10)
+    expect(stats.topStyles).toHaveLength(10)
+    expect(stats.topLabels).toHaveLength(10)
+  })
+
+  it('prefers the master year over the pressing year and sorts chronologically', () => {
+    const stats = computeCollectionStats(collection, { 901: 1976 })
+    expect(stats.yearDistribution).toEqual([
+      { year: 1971, count: 1 },
+      { year: 1976, count: 1 },
+      { year: 1985, count: 1 },
+    ])
+  })
+
+  it('buckets acquisitions by month in chronological order', () => {
+    const stats = computeCollectionStats(collection, { 901: 1976 })
+    expect(stats.acquisitionTimeline.map((b) => b.period)).toEqual([
+      '2021-03',
+      '2022-11',
+    ])
+    expect(stats.acquisitionTimeline[0].count).toBe(2)
+    expect(stats.acquisitionTimeline[0].label).toMatch(/2021/)
+  })
+
+  it('skips releases with unparseable acquisition dates', () => {
+    const stats = computeCollectionStats(
+      [release({ date_added: '' }), release({ id: 2, instance_id: 2, date_added: 'nope' })],
+    )
+    expect(stats.acquisitionTimeline).toEqual([])
+  })
+
+  it('returns empty collections rather than throwing', () => {
+    const stats = computeCollectionStats([])
+    expect(stats.totalReleases).toBe(0)
+    expect(stats.topGenres).toEqual([])
+    expect(stats.yearDistribution).toEqual([])
   })
 })

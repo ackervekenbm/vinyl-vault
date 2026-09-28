@@ -89,3 +89,17 @@ export interface DiscogsRelease {
   year: number
   tracklist: DiscogsTrack[]
 }
+
+/**
+ * Discogs' own valuation of a whole collection, normalized for display.
+ *
+ * The wire response has no separate currency field: Discogs sends each figure
+ * pre-formatted with the account's currency symbol baked in ("$1,737.04").
+ * fetchCollectionValue trims those to strings and coerces the occasional
+ * plain-number payload, and missing figures become an empty string.
+ */
+export interface CollectionValue {
+  minimum: string
+  median: string
+  maximum: string
+}
