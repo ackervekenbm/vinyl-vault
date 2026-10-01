@@ -1011,9 +1011,13 @@ button:disabled {
   color: var(--bg);
 }
 
-.views-mini-btn.primary:hover {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
+/* Hover lifts the fill towards the text colour instead of swapping to
+   --accent-strong: on the club theme that variant is dark enough that light
+   text on it disappears, and the label went with it. */
+.views-mini-btn.primary:hover,
+.views-save-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+  border-color: color-mix(in srgb, var(--accent) 88%, var(--text));
   color: var(--bg);
 }
 
@@ -1072,9 +1076,13 @@ button:disabled {
   color: var(--bg);
 }
 
-.views-save-btn:hover:not(:disabled) {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
+/* A half-transparent accent reads as "on" rather than "off", so an inert save
+   button drops the accent altogether instead of leaning on opacity. */
+.views-save-btn:disabled {
+  opacity: 1;
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-faint);
 }
 
 .views-hint,

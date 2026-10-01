@@ -222,7 +222,16 @@ describe('saved views', () => {
     seedViews([])
     const user = await renderApp()
 
-    // Narrow the collection by hand, then save that selection as a view.
+    // With no search and no filters there is nothing to remember, so the save
+    // button stays out of reach however the view is named.
+    await user.click(screen.getByRole('button', { name: 'Saved views' }))
+    await user.type(
+      screen.getByLabelText('Save the current search & filters as a view'),
+      'Nothing yet',
+    )
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+
+    // Narrow the collection by hand, and the same button comes alive.
     await user.click(screen.getByRole('button', { name: 'Filter the collection' }))
     await user.selectOptions(genreSelect(), 'Jazz')
     await user.click(screen.getByRole('button', { name: 'Filter the collection' }))
@@ -233,6 +242,7 @@ describe('saved views', () => {
       screen.getByLabelText('Save the current search & filters as a view'),
       'Jazz heads',
     )
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Save' }))
     // Saving leaves the collection exactly as it was.
     expect(summary()).toHaveTextContent('1 artist · 1 release · 1 unique album')
