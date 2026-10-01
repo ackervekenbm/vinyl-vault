@@ -9,6 +9,7 @@ Browse your personal **Discogs collection** on any device — grouped by artist,
 - **Sort within an artist** — toggle between **Year** (oldest → newest, default) and **A–Z** per artist; click any artist header to collapse or expand its shelf.
 - **Summary & unique albums** — running totals of `N artists · M releases · U unique albums`, and every artist header shows its own counts. *Unique albums* counts distinct masters (a release id when a master is missing), so several pressings of the same album count once.
 - **Search & filter** — debounced search across artist, title, genre, style, label and year; filters for format, genre, style, label and year range, all populated from your actual data.
+- **Saved views (smart lists)** — save any search + filter combination under a name (**7-inch singles**, **90s techno**) and switch back to it in one tap from the toolbar. Each view shows how many releases it matches *right now*, and can be renamed, updated or deleted; touching the search box or filters marks the view as changed, with a one-tap **update** or **revert**. A view captures the search box and filters only — your folder and sort preference stay as you left them.
 - **Collection folders** — a folder bar above the search: pick a Discogs folder (or **All**) and the search, filters, summary and grids all follow it. The whole collection is fetched once, so switching folders is instant.
 - **Release details** — click any cover for an overlay with everything we have: original/pressing years, format, label + catno, genres/styles, credits, country, rating, added date and direct Discogs links.
 - **Tracklists** — the detail view also lists the full tracklisting, loaded per release on demand and cached in the browser, so it's instant on reopening and works offline.
@@ -35,7 +36,8 @@ Browse your personal **Discogs collection** on any device — grouped by artist,
 
 - Your **token stays in your browser** (localStorage). It's sent to Discogs and nowhere else. Anyone with access to your device could extract it — regenerate it anytime at <https://www.discogs.com/settings/developers>.
 - The **collection, tracklists and cached years live in your browser** (IndexedDB). Nothing is stored on a server — the deployment is completely stateless.
-- **"Clear everything"** in settings removes the cached collection and stored credentials from your device.
+- **Saved views** are stored in the browser too (localStorage), as plain filter definitions — no account, no API calls.
+- **"Clear everything"** in settings removes the cached collection, your saved views and stored credentials from your device.
 
 ## Deployment (production)
 
