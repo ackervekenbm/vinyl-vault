@@ -53,7 +53,6 @@ export function ViewsButton({
 interface ViewsPanelProps {
   views: SavedView[]
   counts: Record<string, number>
-  folderTotal: number
   activeView: SavedView | null
   dirty: boolean
   canSave: boolean
@@ -69,7 +68,6 @@ interface ViewsPanelProps {
 export function ViewsPanel({
   views,
   counts,
-  folderTotal,
   activeView,
   dirty,
   canSave,
@@ -90,9 +88,6 @@ export function ViewsPanel({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const atCapacity = views.length >= MAX_SAVED_VIEWS
-  // "All releases" only stands for what's on screen when the selection really
-  // is empty; hand-picked filters without a view belong to no row at all.
-  const allCurrent = activeView === null && !canSave
 
   // Dismiss on outside click or Escape, and hand focus back to whatever opened
   // the panel so keyboard users don't get dumped on the document body.
@@ -172,7 +167,19 @@ export function ViewsPanel({
     <div className="views-panel" id="views-panel" ref={panelRef}>
       <div className="views-panel-head">
         <span className="filter-panel-title">Saved views</span>
-        <span className="views-panel-hint-inline">{views.length} saved</span>
+        <div className="views-panel-head-actions">
+          <span className="views-panel-hint-inline">{views.length} saved</span>
+          <button
+            type="button"
+            className="filter-reset"
+            onClick={onClear}
+            disabled={!canSave}
+            aria-label="Clear search and filters"
+            title="Clear the search box and every filter"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
       {activeView && dirty && (
@@ -199,121 +206,110 @@ export function ViewsPanel({
         </div>
       )}
 
-      <ul className="views-list">
-        <li className={`views-row${allCurrent ? ' current' : ''}`}>
-          <button
-            type="button"
-            className="views-apply"
-            aria-current={allCurrent ? 'true' : undefined}
-            onClick={onClear}
-          >
-            <span className="views-name">All releases</span>
-            <span className="views-desc">No search or filters</span>
-          </button>
-          <span className="views-count">{folderTotal.toLocaleString()}</span>
-        </li>
-
-        {views.map((view) => {
-          const isCurrent = activeView?.id === view.id
-          const summary = describeCriteria(view.query, view.filters).join(' · ')
-          return (
-            <li key={view.id} className={`views-row${isCurrent ? ' current' : ''}`}>
-              {editingId === view.id ? (
-                <form
-                  className="views-rename"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    submitRename(view.id)
-                  }}
-                >
-                  <input
-                    className="views-rename-input"
-                    value={renameDraft}
-                    onChange={(event) => setRenameDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') setEditingId(null)
-                    }}
-                    maxLength={MAX_NAME_LENGTH}
-                    aria-label={`Rename ${view.name}`}
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    className="views-icon-btn"
-                    aria-label={`Save name for ${view.name}`}
-                  >
-                    <CheckIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="views-icon-btn"
-                    aria-label={`Cancel renaming ${view.name}`}
-                    onClick={() => setEditingId(null)}
-                  >
-                    <CloseIcon />
-                  </button>
-                </form>
-              ) : confirmDeleteId === view.id ? (
-                <div className="views-confirm">
-                  <span className="views-confirm-text">Delete “{view.name}”?</span>
-                  <button
-                    type="button"
-                    className="views-mini-btn danger"
-                    onClick={() => {
-                      setConfirmDeleteId(null)
-                      onDelete(view.id)
+      {views.length > 0 && (
+        <ul className="views-list">
+          {views.map((view) => {
+            const isCurrent = activeView?.id === view.id
+            const summary = describeCriteria(view.query, view.filters).join(' · ')
+            return (
+              <li key={view.id} className={`views-row${isCurrent ? ' current' : ''}`}>
+                {editingId === view.id ? (
+                  <form
+                    className="views-rename"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      submitRename(view.id)
                     }}
                   >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    className="views-mini-btn"
-                    onClick={() => setConfirmDeleteId(null)}
-                  >
-                    Keep
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="views-apply"
-                    aria-current={isCurrent ? 'true' : undefined}
-                    onClick={() => onApply(view)}
-                  >
-                    <span className="views-name">{view.name}</span>
-                    <span className="views-desc">{summary || 'Everything'}</span>
-                  </button>
-                  <span className="views-count">
-                    {(counts[view.id] ?? 0).toLocaleString()}
-                  </span>
-                  <span className="views-row-actions">
-                    <button
-                      type="button"
-                      className="views-icon-btn"
+                    <input
+                      className="views-rename-input"
+                      value={renameDraft}
+                      onChange={(event) => setRenameDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') setEditingId(null)
+                      }}
+                      maxLength={MAX_NAME_LENGTH}
                       aria-label={`Rename ${view.name}`}
-                      title={`Rename “${view.name}”`}
-                      onClick={() => startRename(view)}
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="views-icon-btn"
+                      aria-label={`Save name for ${view.name}`}
                     >
-                      <PencilIcon />
+                      <CheckIcon />
                     </button>
                     <button
                       type="button"
                       className="views-icon-btn"
-                      aria-label={`Delete ${view.name}`}
-                      title={`Delete “${view.name}”`}
-                      onClick={() => startDelete(view)}
+                      aria-label={`Cancel renaming ${view.name}`}
+                      onClick={() => setEditingId(null)}
                     >
-                      <TrashIcon />
+                      <CloseIcon />
                     </button>
-                  </span>
-                </>
-              )}
-            </li>
-          )
-        })}
-      </ul>
+                  </form>
+                ) : confirmDeleteId === view.id ? (
+                  <div className="views-confirm">
+                    <span className="views-confirm-text">Delete “{view.name}”?</span>
+                    <button
+                      type="button"
+                      className="views-mini-btn danger"
+                      onClick={() => {
+                        setConfirmDeleteId(null)
+                        onDelete(view.id)
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      className="views-mini-btn"
+                      onClick={() => setConfirmDeleteId(null)}
+                    >
+                      Keep
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="views-apply"
+                      aria-current={isCurrent ? 'true' : undefined}
+                      onClick={() => onApply(view)}
+                    >
+                      <span className="views-name">{view.name}</span>
+                      <span className="views-desc">{summary || 'Everything'}</span>
+                    </button>
+                    <span className="views-count">
+                      {(counts[view.id] ?? 0).toLocaleString()}
+                    </span>
+                    <span className="views-row-actions">
+                      <button
+                        type="button"
+                        className="views-icon-btn"
+                        aria-label={`Rename ${view.name}`}
+                        title={`Rename “${view.name}”`}
+                        onClick={() => startRename(view)}
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="views-icon-btn"
+                        aria-label={`Delete ${view.name}`}
+                        title={`Delete “${view.name}”`}
+                        onClick={() => startDelete(view)}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </span>
+                  </>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       <form className="views-save" onSubmit={submitSave}>
         <label className="views-save-label" htmlFor="views-save-name">

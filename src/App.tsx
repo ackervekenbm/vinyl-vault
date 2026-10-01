@@ -503,7 +503,6 @@ export default function App() {
             <ViewsPanel
               views={views}
               counts={viewCounts}
-              folderTotal={folderReleases.length}
               activeView={activeView}
               dirty={viewDirty}
               canSave={canSaveView}

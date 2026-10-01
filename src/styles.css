@@ -809,6 +809,12 @@ button:disabled {
   margin-bottom: 10px;
 }
 
+.views-panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .views-panel-hint-inline {
   color: var(--text-faint);
   font-size: 12px;

@@ -165,7 +165,7 @@ describe('saved views', () => {
     expect(summary()).toHaveTextContent('1 artist · 1 release · 1 unique album')
 
     await user.click(screen.getByRole('button', { name: 'Saved views — Rock records in use' }))
-    await user.click(screen.getByRole('button', { name: /^All releases/ }))
+    await user.click(screen.getByRole('button', { name: 'Clear search and filters' }))
     expect(summary()).toHaveTextContent('2 artists · 2 releases · 2 unique albums')
     expect(screen.getByText('Headhunters')).toBeInTheDocument()
   })

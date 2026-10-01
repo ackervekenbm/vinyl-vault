@@ -47,7 +47,6 @@ function Harness({
       <ViewsPanel
         views={list}
         counts={{ singles: 42, techno: 0 }}
-        folderTotal={1234}
         activeView={activeView}
         dirty={dirty}
         canSave={canSave}
@@ -135,23 +134,31 @@ describe('ViewsPanel', () => {
     expect(within(technoRow).getByText('0')).toBeInTheDocument()
   })
 
-  it('marks the active view as current and offers All releases when nothing is selected', async () => {
+  it('marks the active view as current', () => {
+    const { rerender } = render(<Harness spies={spyProps()} />)
+
+    expect(viewRow('7-inch singles')).not.toHaveAttribute('aria-current')
+    expect(viewRow('90s techno')).not.toHaveAttribute('aria-current')
+
+    rerender(<Harness spies={spyProps()} activeView={singles} />)
+    expect(viewRow('7-inch singles')).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('clears the selection from the header, and only offers it when there is one', async () => {
     const spies = spyProps()
     const { rerender } = render(<Harness spies={spies} canSave={false} />)
 
-    expect(viewRow('All releases')).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByText('1,234')).toBeInTheDocument()
-    await userEvent.click(viewRow('All releases'))
-    expect(spies.onClear).toHaveBeenCalledTimes(1)
+    const clear = screen.getByRole('button', { name: 'Clear search and filters' })
+    expect(clear).toBeDisabled()
 
-    rerender(<Harness spies={spies} activeView={singles} />)
-    expect(viewRow('7-inch singles')).toHaveAttribute('aria-current', 'true')
-    expect(viewRow('All releases')).not.toHaveAttribute('aria-current')
+    rerender(<Harness spies={spies} canSave />)
+    expect(screen.getByRole('button', { name: 'Clear search and filters' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search and filters' }))
+    expect(spies.onClear).toHaveBeenCalledTimes(1)
   })
 
   it('claims no view is current while hand-picked filters are on screen', () => {
     render(<Harness spies={spyProps()} canSave />)
-    expect(viewRow('All releases')).not.toHaveAttribute('aria-current')
     expect(viewRow('7-inch singles')).not.toHaveAttribute('aria-current')
   })
 
