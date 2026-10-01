@@ -6,6 +6,13 @@ import 'fake-indexeddb/auto'
 // React act() support for @testing-library/react under Vitest.
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
+// jsdom has no layout engine, so `scrollIntoView` — how the app brings swapped
+// content back into view — is missing. Stub it: no test asserts on scrolling,
+// but a click handler that calls it must not throw.
+if (typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 // @testing-library/react can't auto-register its cleanup without a global
 // afterEach; Vitest runs with globals disabled here.
 afterEach(() => {

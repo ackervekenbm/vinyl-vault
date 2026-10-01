@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { Settings as SettingsType } from './db/settings'
 import { loadSettings, saveSettings, clearSettings } from './db/settings'
 import type { ThemeId } from './theme'
@@ -25,18 +25,31 @@ import { StorageStats } from './components/StorageStats'
 import { useScrollLock } from './hooks/useScrollLock'
 import { SearchBar } from './components/SearchBar'
 import { FiltersButton, FilterPanel } from './components/FilterMenu'
+import { ViewsButton, ViewsPanel } from './components/ViewsMenu'
 import { ArtistSection } from './components/ArtistSection'
 import { ReleaseDetail } from './components/ReleaseDetail'
 import { StatsPanel } from './components/StatsPanel'
 import { SettingsIcon, RefreshIcon, ShuffleIcon, ChevronIcon, RecordPlayer, StatsIcon } from './components/icons'
+import { loadViews, saveViews, clearViews } from './db/views'
+import {
+  createSavedView,
+  hasCriteria,
+  sameCriteria,
+  type SavedView,
+} from './utils/views'
 
-function useDebounced<T>(value: T, delay: number): T {
+/**
+ * Debounces the search box while typing, but also hands back a setter that
+ * applies a value immediately — a saved view should switch the listing at once
+ * rather than wait out the typing delay.
+ */
+function useDebounced<T>(value: T, delay: number): [T, (next: T) => void] {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
     const id = setTimeout(() => setDebounced(value), delay)
     return () => clearTimeout(id)
   }, [value, delay])
-  return debounced
+  return [debounced, setDebounced]
 }
 
 function formatTime(ts: number): string {
@@ -73,13 +86,17 @@ export default function App() {
   }, [theme])
 
   const [query, setQuery] = useState('')
-  const debouncedQuery = useDebounced(query, 150)
+  const [debouncedQuery, setDebouncedQuery] = useDebounced(query, 150)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [views, setViews] = useState<SavedView[]>(loadViews)
+  const [viewsOpen, setViewsOpen] = useState(false)
+  const [activeViewId, setActiveViewId] = useState<string | null>(null)
   const [folderId, setFolderId] = useState(0)
   const [artistSortMode, setArtistSortMode] = useState<ArtistSortMode>('chronological')
   const [selected, setSelected] = useState<DisplayRelease | null>(null)
   const [showStats, setShowStats] = useState(false)
+  const toolbarRef = useRef<HTMLDivElement>(null)
 
   // The valuation is a single cheap request, but it is still only asked for
   // once the user actually opens the stats panel.
@@ -113,6 +130,7 @@ export default function App() {
     setFolderId(0)
     setArtistSortMode('chronological')
     setSelected(null)
+    setActiveViewId(null)
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [accountKey])
 
@@ -137,6 +155,98 @@ export default function App() {
   const totalMatching = filtered.length
   const uniqueMatching = useMemo(() => countUniqueAlbums(filtered), [filtered])
 
+  // A view is only "in use" while the live selection still matches it exactly;
+  // any hand edit to the search box or filters marks it as changed.
+  const activeView = useMemo(
+    () => views.find((view) => view.id === activeViewId) ?? null,
+    [views, activeViewId],
+  )
+  const viewDirty = activeView ? !sameCriteria(activeView, query, filters) : false
+  const canSaveView = hasCriteria(query, filters)
+
+  // Live match counts, so a stale view (a label the collection no longer has)
+  // shows 0 instead of silently promising results.
+  const viewCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const view of views) {
+      counts[view.id] = filterReleases(
+        folderReleases,
+        { ...view.filters, query: view.query },
+        masterYears,
+      ).length
+    }
+    return counts
+  }, [views, folderReleases, masterYears])
+
+  const persistViews = useCallback((next: SavedView[]) => {
+    setViews(next)
+    saveViews(next)
+  }, [])
+
+  const closeViews = useCallback(() => setViewsOpen(false), [])
+
+  // Switching views swaps the whole listing, so bring the user back to the
+  // controls that changed it instead of leaving them mid-grid.
+  const revealToolbar = useCallback(() => {
+    toolbarRef.current?.scrollIntoView({ block: 'start' })
+  }, [])
+
+  const applyView = useCallback(
+    (view: SavedView) => {
+      setQuery(view.query)
+      setDebouncedQuery(view.query)
+      setFilters({ ...view.filters })
+      setActiveViewId(view.id)
+      setViewsOpen(false)
+      revealToolbar()
+    },
+    [revealToolbar, setDebouncedQuery],
+  )
+
+  const clearView = useCallback(() => {
+    setQuery('')
+    setDebouncedQuery('')
+    setFilters(DEFAULT_FILTERS)
+    setActiveViewId(null)
+    setViewsOpen(false)
+    revealToolbar()
+  }, [revealToolbar, setDebouncedQuery])
+
+  const addView = useCallback(
+    (name: string) => {
+      persistViews([...views, createSavedView(name, query, filters)])
+    },
+    [persistViews, views, query, filters],
+  )
+
+  const renameView = useCallback(
+    (id: string, name: string) => {
+      persistViews(views.map((view) => (view.id === id ? { ...view, name: name.trim() } : view)))
+    },
+    [persistViews, views],
+  )
+
+  const deleteView = useCallback(
+    (id: string) => {
+      persistViews(views.filter((view) => view.id !== id))
+      setActiveViewId((current) => (current === id ? null : current))
+    },
+    [persistViews, views],
+  )
+
+  const updateView = useCallback(
+    (view: SavedView) => {
+      persistViews(
+        views.map((entry) =>
+          entry.id === view.id
+            ? { ...entry, query: query.trim(), filters: { ...filters } }
+            : entry,
+        ),
+      )
+    },
+    [persistViews, views, query, filters],
+  )
+
   const onSaveSettings = (newSettings: SettingsType) => {
     saveSettings({ ...newSettings, theme })
     setSettings({ ...newSettings, theme })
@@ -157,7 +267,10 @@ export default function App() {
 
   const onFolderChange = (id: number) => {
     setFolderId(id)
+    // Folder switching resets the filters, so a saved view is no longer what's
+    // on screen: drop it rather than claim it is still applied.
     setFilters(DEFAULT_FILTERS)
+    setActiveViewId(null)
   }
 
   const pickRandom = useCallback(() => {
@@ -169,6 +282,11 @@ export default function App() {
   const onClearData = async () => {
     await wipeCache()
     clearSettings()
+    // Saved views live in their own storage key, so "clear everything" has to
+    // take them down explicitly to keep reclaiming everything it claims to.
+    clearViews()
+    setViews([])
+    setActiveViewId(null)
     setSettings(null)
     setShowSettings(true)
   }
@@ -327,12 +445,25 @@ export default function App() {
             </div>
           )}
 
-          <div className="toolbar">
+          <div className="toolbar" ref={toolbarRef}>
             <SearchBar value={query} onChange={setQuery} />
             <FiltersButton
               filters={filters}
               open={filtersOpen}
-              onToggle={() => setFiltersOpen((open) => !open)}
+              onToggle={() => {
+                setFiltersOpen((open) => !open)
+                setViewsOpen(false)
+              }}
+            />
+            <ViewsButton
+              views={views}
+              activeView={activeView}
+              dirty={viewDirty}
+              open={viewsOpen}
+              onToggle={() => {
+                setViewsOpen((open) => !open)
+                setFiltersOpen(false)
+              }}
             />
             <div className="global-sort">
               <span className="global-sort-label">Sort</span>
@@ -368,6 +499,23 @@ export default function App() {
             />
           )}
 
+          {viewsOpen && (
+            <ViewsPanel
+              views={views}
+              counts={viewCounts}
+              activeView={activeView}
+              dirty={viewDirty}
+              canSave={canSaveView}
+              onApply={applyView}
+              onClear={clearView}
+              onSave={addView}
+              onRename={renameView}
+              onDelete={deleteView}
+              onUpdate={updateView}
+              onClose={closeViews}
+            />
+          )}
+
           <div className="summary">
             <p>
               {artistCount.toLocaleString()}
@@ -383,7 +531,24 @@ export default function App() {
 
           {grouped.length === 0 ? (
             <div className="full-state empty">
-              <p>No releases match your search or filters.</p>
+              <p>
+                {activeView
+                  ? `Nothing matches “${activeView.name}”${folderId === 0 ? '' : ' in this folder'}.`
+                  : 'No releases match your search or filters.'}
+              </p>
+              {activeView && (
+                <div className="empty-actions">
+                  {viewDirty ? (
+                    <button type="button" onClick={() => applyView(activeView)}>
+                      Revert to “{activeView.name}”
+                    </button>
+                  ) : (
+                    <button type="button" onClick={clearView}>
+                      Show all releases
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="artist-list">
