@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2025-2026 ackervekenbm
+
 import type { DiscogsArtistRef, DiscogsCollectionRelease } from '../types/discogs'
 import type { MasterYears } from '../api/discogs'
 import { compareSortKeys, makeSortKey, sortLetter } from './sortName'

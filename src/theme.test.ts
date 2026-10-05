@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2025-2026 ackervekenbm
+
 import { afterEach, describe, expect, it } from 'vitest'
 import { applyTheme, isThemeId, THEMES, THEME_IDS } from './theme'
 

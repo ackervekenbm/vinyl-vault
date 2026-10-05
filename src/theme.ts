@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2025-2026 ackervekenbm
+
 export const THEME_IDS = ['midnight', 'paper', 'club', 'forest'] as const
 export type ThemeId = (typeof THEME_IDS)[number]
 

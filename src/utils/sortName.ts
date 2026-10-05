@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2025-2026 ackervekenbm
+
 // Strips leading English articles so "The Menzingers" files under "M".
 const ARTICLE_PATTERN = /^(a|an|the)\s+/i
 // Collapse punctuation/whitespace to a single space (digits and letters kept).
